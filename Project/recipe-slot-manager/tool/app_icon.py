@@ -81,7 +81,7 @@ def write_svgs():
         "mark-greyscale.svg": svg_doc("Recipe Slot Manager mark, greyscale", mark_svg(FULL, plate="#9A9690", body="#000000", dot="#9A9690", red="#000000")),
     }
     for name, text in files.items():
-        with open(os.path.join(d, name), "w") as fh:
+        with open(os.path.join(d, name), "w", encoding="utf-8") as fh:
             fh.write(text)
     return [os.path.join("assets", "brand", n) for n in files]
 
@@ -121,7 +121,7 @@ def write_android_xml():
     for rel, text in files.items():
         full = os.path.join(res, rel)
         os.makedirs(os.path.dirname(full), exist_ok=True)
-        with open(full, "w") as fh:
+        with open(full, "w", encoding="utf-8") as fh:
             fh.write(text)
         out.append(os.path.relpath(full, ROOT))
     return out
