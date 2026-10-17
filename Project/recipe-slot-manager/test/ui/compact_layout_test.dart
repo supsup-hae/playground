@@ -117,6 +117,19 @@ void main() {
     });
   }
 
+  testWidgets('창 크기가 배치 기준을 넘나들어도 화면 상태가 남는다', (tester) async {
+    await tester.runAsync(app.session.connect);
+    await app.pumpShell(tester, index: 2);
+    await TestApp.tapAndWait(tester, find.text('7슬롯 읽기'));
+    expect(find.text('Recipe 7'), findsOneWidget);
+
+    TestApp.useWindow(tester, phoneSizes['S26 울트라 세로']!);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.text('Recipe 7'), findsOneWidget);
+  });
+
   testWidgets('넓은 창에서는 왼쪽 레일을 그대로 쓴다', (tester) async {
     await app.pumpShell(tester);
 

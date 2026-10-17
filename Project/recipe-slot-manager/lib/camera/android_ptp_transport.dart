@@ -4,6 +4,7 @@ import 'package:recipe_slot_manager/camera/ptp_channel.dart';
 import 'package:recipe_slot_manager/ptp/ptp_codes.dart';
 import 'package:recipe_slot_manager/ptp/ptp_container.dart';
 import 'package:recipe_slot_manager/ptp/ptp_transport.dart';
+import 'package:recipe_slot_manager/util/serial_queue.dart';
 
 /// Android USB bulk 전송 위에서 PTP 를 주고받는다. Kotlin 쪽은
 /// `android/app/src/main/kotlin/dev/supsuphae/recipe_slot_manager/PtpChannel.kt` 이고,
@@ -17,8 +18,12 @@ class AndroidPtpTransport implements PtpTransport {
   /// 마지막으로 보낸 명령의 transaction ID. 세션을 닫는 명령이 그다음 번호를 쓴다.
   var _lastTransactionId = 0;
 
+  /// bulk OUT·IN 이 명령 사이에 섞이면 응답이 다른 명령에 붙으므로, 호출하는 쪽이
+  /// 겹쳐 불러도 연결·명령·끊기를 하나씩 한다.
+  final _calls = SerialQueue();
+
   @override
-  Future<String> connect() async {
+  Future<String> connect() => _calls.run(() async {
     final opened = await guardPtpChannel(
       () => ptpChannel.invokeMapMethod<String, Object?>('open'),
     );
@@ -43,18 +48,19 @@ class AndroidPtpTransport implements PtpTransport {
       {'name': final String name} => name,
       _ => 'Fujifilm',
     };
-  }
+  });
 
   @override
-  Future<PtpReply> send(Uint8List command, {Uint8List? data}) =>
-      guardPtpChannel(() {
-        _lastTransactionId = ByteData.sublistView(command)
-            .getUint32(8, Endian.little);
-        return _transact(command, data: data);
-      });
+  Future<PtpReply> send(Uint8List command, {Uint8List? data}) => _calls.run(
+    () => guardPtpChannel(() {
+      _lastTransactionId = ByteData.sublistView(command)
+          .getUint32(8, Endian.little);
+      return _transact(command, data: data);
+    }),
+  );
 
   @override
-  Future<void> disconnect() async {
+  Future<void> disconnect() => _calls.run(() async {
     try {
       await guardPtpChannel(
         () => _transact(
@@ -65,7 +71,7 @@ class AndroidPtpTransport implements PtpTransport {
       // 케이블이 빠졌거나 세션이 이미 없다. 장치는 아래에서 그대로 닫는다.
     }
     await guardPtpChannel(() => ptpChannel.invokeMethod<void>('close'));
-  }
+  });
 
   Future<PtpReply> _transact(Uint8List command, {Uint8List? data}) async {
     await ptpChannel.invokeMethod<void>('write', command);

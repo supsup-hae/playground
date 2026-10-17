@@ -188,6 +188,23 @@ void main() {
       expect(written.last.sublist(ptpHeaderLength), slotValue);
     });
 
+    test('동시에 보낸 명령도 앞 명령의 응답을 다 읽은 뒤에 다음 명령을 보낸다', () async {
+      final transport = AndroidPtpTransport();
+      final next = ptpCommand(
+        PtpOp.getDevicePropValue,
+        transactionId: 6,
+        params: [FujiProp.presetName],
+      );
+      packets.addAll([
+        response(PtpResponse.ok, 5),
+        response(PtpResponse.ok, 6),
+      ]);
+
+      await Future.wait([transport.send(getSlot), transport.send(next)]);
+
+      expect(methods, ['write', 'read', 'write', 'read']);
+    });
+
     test('데이터·응답이 아닌 컨테이너는 PtpTransportException 을 던진다', () async {
       final event = response(PtpResponse.ok, 5);
       ByteData.sublistView(event).setUint16(4, 4, Endian.little);

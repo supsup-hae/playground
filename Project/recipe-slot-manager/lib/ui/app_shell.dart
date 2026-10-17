@@ -69,41 +69,42 @@ class _AppShellState extends State<AppShell> {
       ],
     );
 
-    if (compact) {
-      return Scaffold(
-        // 아래 여백(제스처 막대)은 NavigationBar 가 맡는다.
-        body: SafeArea(bottom: false, child: content),
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _index,
-          onDestinationSelected: _select,
-          destinations: [
-            for (final (icon, label) in _destinations)
-              NavigationDestination(icon: Icon(icon), label: label),
-          ],
-        ),
-      );
-    }
+    // 배치가 바뀌어도 화면 상태가 남도록 본문은 늘 같은 자리(같은 키)에 둔다.
     return Scaffold(
+      // 아래 탭일 때 아래 여백(제스처 막대)은 NavigationBar 가 맡는다.
       body: SafeArea(
+        bottom: !compact,
         child: Row(
           children: [
-            NavigationRail(
-              selectedIndex: _index,
-              labelType: NavigationRailLabelType.all,
-              onDestinationSelected: _select,
-              destinations: [
-                for (final (icon, label) in _destinations)
-                  NavigationRailDestination(
-                    icon: Icon(icon),
-                    label: Text(label),
-                  ),
-              ],
-            ),
-            const VerticalDivider(width: 1),
-            Expanded(child: content),
+            if (!compact) ...[
+              NavigationRail(
+                selectedIndex: _index,
+                labelType: NavigationRailLabelType.all,
+                onDestinationSelected: _select,
+                destinations: [
+                  for (final (icon, label) in _destinations)
+                    NavigationRailDestination(
+                      icon: Icon(icon),
+                      label: Text(label),
+                    ),
+                ],
+              ),
+              const VerticalDivider(width: 1),
+            ],
+            Expanded(key: const ValueKey('shell-content'), child: content),
           ],
         ),
       ),
+      bottomNavigationBar: compact
+          ? NavigationBar(
+              selectedIndex: _index,
+              onDestinationSelected: _select,
+              destinations: [
+                for (final (icon, label) in _destinations)
+                  NavigationDestination(icon: Icon(icon), label: label),
+              ],
+            )
+          : null,
     );
   }
 }
