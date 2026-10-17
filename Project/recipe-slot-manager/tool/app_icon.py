@@ -7,7 +7,8 @@
 표준 라이브러리만 쓴다 (PNG 는 SDF 로 직접 그린다). 마크는 256 격자:
 반지름 104 다이얼을 y=112 에서 실버 상판 / 블랙 바디로 나누고, 그 경계에
 왼쪽으로 열린 슬롯(높이 20)을 낸다. 슬롯 안의 점 7개가 C1–C7 이고,
-가장 바깥(슬롯 입구) 점만 빨강이다. 32px 이하에서는 점 하나짜리 작은 판을 쓴다.
+가장 바깥(슬롯 입구) 점만 빨강, 나머지 여섯은 상판과 같은 실버다.
+32px 이하에서는 점 하나짜리 작은 판을 쓴다.
 """
 import math, os, struct, sys, zlib
 
@@ -51,7 +52,8 @@ def dot_path(x, r):
     return f"M{_f(x - r)} {_f(SEAM)}A{_f(r)} {_f(r)} 0 1 0 {_f(x + r)} {_f(SEAM)}A{_f(r)} {_f(r)} 0 1 0 {_f(x - r)} {_f(SEAM)}Z"
 
 
-def mark_svg(s, plate=SILVER, body=BODY, dot=BODY, red=RED):
+def mark_svg(s, plate=SILVER, body=BODY, dot=SILVER, red=RED):
+    # dot: 빨강이 아닌 슬롯 점의 색. 기본은 상판과 같은 실버
     out = f'<path fill="{plate}" d="{plate_path(s)}"/><path fill="{body}" d="{body_path(s)}"/>'
     for x, r, is_red in s["dots"]:
         out += f'<path fill="{red if is_red else dot}" d="{dot_path(x, r)}"/>'
@@ -76,7 +78,7 @@ def write_svgs():
         "app-icon-small.svg": svg_doc("Recipe Slot Manager app icon, 32px and below", icon_svg(SMALL)),
         "mark.svg": svg_doc("Recipe Slot Manager mark", mark_svg(FULL)),
         "mark-on-dark.svg": svg_doc("Recipe Slot Manager mark on dark", mark_svg(FULL, plate=LIGHT, body="#34373C", dot=LIGHT, red="#EA4A35")),
-        "mark-greyscale.svg": svg_doc("Recipe Slot Manager mark, greyscale", mark_svg(FULL, plate="#9A9690", body="#000000", dot="#000000", red="#000000")),
+        "mark-greyscale.svg": svg_doc("Recipe Slot Manager mark, greyscale", mark_svg(FULL, plate="#9A9690", body="#000000", dot="#9A9690", red="#000000")),
     }
     for name, text in files.items():
         with open(os.path.join(d, name), "w") as fh:
@@ -100,7 +102,7 @@ def _vector(paths):
 def write_android_xml():
     res = os.path.join(ROOT, "android", "app", "src", "main", "res")
     fg = [(SILVER, plate_path(FULL)), (BODY, body_path(FULL))]
-    fg += [(RED if r else BODY, dot_path(x, rad)) for x, rad, r in FULL["dots"]]
+    fg += [(RED if r else SILVER, dot_path(x, rad)) for x, rad, r in FULL["dots"]]
     mono = [("#FFFFFF", plate_path(FULL)), ("#FFFFFF", body_path(FULL))]
     mono += [("#FFFFFF", dot_path(x, rad)) for x, rad, r in FULL["dots"]]
     files = {
@@ -174,7 +176,7 @@ def render_png(path, size, s, layout):
                     sl = _slot_sd(u, v, s)
                     layers = [(max(dd, -sl), silver), (max(dd, SEAM - v, -sl), body)]
                     for dx, dr, is_red in s["dots"]:
-                        layers.append((math.hypot(u - dx, v - SEAM) - dr, red if is_red else body))
+                        layers.append((math.hypot(u - dx, v - SEAM) - dr, red if is_red else silver))
                     for d, c in layers:
                         cov = max(0.0, min(1.0, 0.5 - d / px))
                         if cov:
@@ -192,6 +194,7 @@ def render_png(path, size, s, layout):
 def write_pngs():
     written = []
     mac = os.path.join(ROOT, "macos", "Runner", "Assets.xcassets", "AppIcon.appiconset")
+    os.makedirs(mac, exist_ok=True)
     for n in (16, 32, 64, 128, 256, 512, 1024):
         p = os.path.join(mac, f"app_icon_{n}.png")
         render_png(p, n, SMALL if n <= 32 else FULL, "mac")
@@ -199,6 +202,7 @@ def write_pngs():
     res = os.path.join(ROOT, "android", "app", "src", "main", "res")
     for folder, n in (("mdpi", 48), ("hdpi", 72), ("xhdpi", 96), ("xxhdpi", 144), ("xxxhdpi", 192)):
         p = os.path.join(res, f"mipmap-{folder}", "ic_launcher.png")
+        os.makedirs(os.path.dirname(p), exist_ok=True)
         render_png(p, n, SMALL if n < 96 else FULL, "square")
         written.append(p)
     return written
