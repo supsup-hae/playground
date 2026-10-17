@@ -387,3 +387,18 @@ flutter build macos --debug --dart-define-from-file=supabase.example.json
 - **Confidence: 7/10.** Dart 로직과 화면은 시험으로 끝까지 확인된다. Supabase 연결과 실기기는 사용자가 확인해야 한다.
 - PRD 의 "기기 SQLite 캐시" 를 JSON 파일 저장으로 바꾼다. 레코드가 수십 개 규모이고, 1단계의 원자적 JSON 저장을 그대로 쓸 수 있어 의존성이 하나 줄어든다.
 - 디자인 시스템은 사용자 결정(2026-10-17)으로 2단계에 들어왔다.
+
+### 구현 중 바뀐 점
+- 화면 공용 오류 처리는 `run_guard.dart` 대신 `lib/camera/camera_session.dart` 의 `CameraSession.run` 이 맡는다. 연결 상태·작업 중 표시·쓰기 전 백업을 여러 화면이 함께 쓴다. `CameraLog` 는 `ChangeNotifier` 다.
+- 값 반올림·표시 함수(`snapToStep`, `formatSigned`)는 `lib/util/step_value.dart` 에 둔다. 레시피 모델과 다이얼이 함께 쓴다.
+- 7슬롯 일괄 쓰기에서 바뀐 값이 없는 슬롯은 선택하지 않고, 슬롯을 바꾸지 않은 작업은 원래 슬롯 복귀 쓰기도 하지 않는다.
+- 로그인은 이메일 + 비밀번호다 (사용자 결정 2026-10-17). 무료 플랜 기본 SMTP 에서는 메일 템플릿을 바꿀 수 없어 OTP 코드를 넣을 수 없다.
+- 키는 publishable key 를 `SUPABASE_PUBLISHABLE_KEY` 로 받는다. 테이블은 `authenticated` 에만 `GRANT` 한다 (2026-04-28 이후 새 public 테이블은 Data API 에 자동 노출되지 않음).
+- 기본 키는 `(user_id, id)`, RLS 는 select·insert·update 를 본인 행으로 한정하고 delete 는 두지 않는다 (소프트 삭제).
+- 테이블 생성 SQL 은 `supabase/setup.sql` 이다. Supabase CLI 가 없어 마이그레이션 파일로 두지 않았다.
+
+### Supabase 수동 확인 (사용자)
+1. 대시보드 SQL 편집기 또는 Supabase MCP 로 `supabase/setup.sql` 실행
+2. Authentication → Sign In / Providers → Email 켜기. 확인 메일 없이 쓰려면 "Confirm email" 끄기
+3. Project Settings → API Keys 에서 publishable key 복사, `supabase.example.json` 을 `supabase.json` 으로 복사해 URL·키 입력
+4. `flutter run -d macos --dart-define-from-file=supabase.json` → 상단 "로그인" → 가입·로그인 → 레시피 저장 → "동기화" → 표 `recipes` 에 행 생성 확인

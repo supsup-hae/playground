@@ -129,7 +129,7 @@ When 장소를 옮기거나 특정 장면을 만나면, I want to 그 상황에 
 | # | Phase | Description | Status | Parallel | Depends | PRP Plan |
 |---|-------|-------------|--------|----------|---------|----------|
 | 1 | 카메라 연결 기반 (macOS) | X-T5 USB 연결, C1–C7 읽기·쓰기·검증, 백업·복원, 왕복 시간 측정 | complete (실기기 미확인) | - | - | [plans/phase-1-camera-link.plan.md](plans/phase-1-camera-link.plan.md) |
-| 2 | 보관함·묶음·비교 | 디자인 시스템, Supabase 로그인·저장·동기화, 레시피 편집, 상황별 묶음, 비교 화면, 일괄 덮어쓰기 | in-progress | - | 1 | [plans/phase-2-library.plan.md](plans/phase-2-library.plan.md) |
+| 2 | 보관함·묶음·비교 | 디자인 시스템, Supabase 로그인·저장·동기화, 레시피 편집, 상황별 묶음, 비교 화면, 일괄 덮어쓰기 | complete (Supabase 연결·실기기 미확인) | - | 1 | [plans/phase-2-library.plan.md](plans/phase-2-library.plan.md) |
 | 3 | Android | 같은 기능을 Android에서 USB로 | pending | - | 2 | - |
 | 4 | 가져오기 | 카메라 슬롯 가져오기, JPEG EXIF 추출, OCR | pending | with 5 | 2 | - |
 | 5 | RAW 미리보기 | RAF 업로드 → 카메라 내부 현상 → 좌우 비교 | pending | with 4 | 2 | - |
