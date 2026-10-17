@@ -29,6 +29,16 @@ abstract final class FujiProp {
   static final presetProps = List<int>.unmodifiable([
     for (var code = presetFirst; code <= presetLast; code++) code,
   ]);
+
+  /// 카메라에 쓰는 순서. 색온도(D19C)는 WB 모드(D199) 바로 뒤, WB 시프트(D19A·D19B)보다
+  /// 앞이어야 카메라가 받아들인다. 나머지는 코드 순서다.
+  static final writeOrder = List<int>.unmodifiable([
+    for (var code = presetFirst; code <= 0xD199; code++) code,
+    0xD19C,
+    0xD19A,
+    0xD19B,
+    for (var code = 0xD19D; code <= presetLast; code++) code,
+  ]);
 }
 
 /// 속성 코드를 `D18E` 같은 4자리 대문자 16진수로 바꾼다.

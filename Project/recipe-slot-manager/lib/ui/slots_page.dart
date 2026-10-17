@@ -2,91 +2,58 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:recipe_slot_manager/camera/fuji_camera.dart';
+import 'package:recipe_slot_manager/camera/camera_session.dart';
 import 'package:recipe_slot_manager/camera/prop_value.dart';
-import 'package:recipe_slot_manager/camera/slot_backup_store.dart';
 import 'package:recipe_slot_manager/camera/slot_snapshot.dart';
 import 'package:recipe_slot_manager/ptp/ptp_codes.dart';
-import 'package:recipe_slot_manager/ptp/ptp_transport.dart';
 
 /// C1–C7의 원시 값을 표로 보여 주고, 값 수정·쓰기·백업 복원을 하는 확인용 화면.
 class SlotsPage extends StatefulWidget {
-  const SlotsPage({super.key, required this.camera, required this.backupStore});
+  const SlotsPage({super.key, required this.session});
 
-  final FujiCamera camera;
-  final SlotBackupStore backupStore;
+  final CameraSession session;
 
   @override
   State<SlotsPage> createState() => _SlotsPageState();
 }
 
 class _SlotsPageState extends State<SlotsPage> {
-  String? _model;
   List<SlotSnapshot> _slots = const [];
 
   /// 슬롯 번호 → (속성 코드 → 새 값). 아직 카메라에 쓰지 않은 수정.
   final _edits = <int, Map<int, Uint8List>>{};
-  var _busy = false;
 
-  FujiCamera get _camera => widget.camera;
+  CameraSession get _session => widget.session;
 
-  /// [action] 을 실행하고 실패를 로그에 남긴다. 쓰기 도중 실패하면 카메라 값이 표와
-  /// 달라졌을 수 있으므로, [clearSlotsOnError] 이면 표를 비워 다시 읽게 한다.
+  /// 쓰기 도중 실패하면 카메라 값이 표와 달라졌을 수 있으므로,
+  /// [clearSlotsOnError] 이면 표를 비워 다시 읽게 한다.
   Future<void> _run(
     String label,
     Future<void> Function() action, {
     bool clearSlotsOnError = false,
   }) async {
-    setState(() => _busy = true);
-    String? failure;
-    try {
-      await action();
-    } on PtpTransportException catch (e) {
-      failure = e.message;
-    } on SlotWriteException catch (e) {
-      failure = e.message;
-    } on FileSystemException catch (e) {
-      failure = '백업 파일 ${e.message}';
-    } on FormatException catch (e) {
-      failure = '형식 오류: ${e.message}';
-    } finally {
-      if (failure != null) _camera.log.add('$label 실패: $failure');
-      if (mounted) {
-        setState(() {
-          _busy = false;
-          if (failure != null && clearSlotsOnError) _slots = const [];
-        });
-      }
+    final failure = await _session.run(label, action);
+    if (mounted && failure != null && clearSlotsOnError) {
+      setState(() => _slots = const []);
     }
   }
-
-  Future<void> _connect() => _run('연결', () async {
-    final model = await _camera.connect();
-    if (mounted) setState(() => _model = model);
-  });
 
   Future<void> _readAll() => _run('읽기', _reload);
 
   Future<void> _reload() async {
-    final slots = await _camera.readAllSlots();
+    final slots = await _session.camera.readAllSlots();
     if (mounted) setState(() => _slots = slots);
   }
 
-  /// 카메라에서 7슬롯을 새로 읽어 백업으로 남기고, 읽은 값을 돌려준다.
-  Future<List<SlotSnapshot>> _backupFromCamera() async {
-    final slots = await _camera.readAllSlots();
-    final file = await widget.backupStore.save(_model ?? 'unknown', slots);
-    _camera.log.add('백업 저장: ${file.uri.pathSegments.last}');
-    return slots;
-  }
-
   Future<void> _writeSlot(int slot) => _run('C$slot 쓰기', () async {
-    final fresh = await _backupFromCamera();
+    final fresh = await _session.backupFromCamera();
     final current = fresh.firstWhere((s) => s.slot == slot);
     final target = current.copyWith(
       props: {...current.props, ...?_edits[slot]},
     );
-    _logResult(await _camera.writeSlot(target, current: current));
+    _session.logWriteResult(
+      await _session.camera.writeSlot(target, current: current),
+    );
     _edits.remove(slot);
     await _reload();
   }, clearSlotsOnError: true);
@@ -94,9 +61,9 @@ class _SlotsPageState extends State<SlotsPage> {
   Future<void> _restore() async {
     final List<File> files;
     try {
-      files = await widget.backupStore.list();
+      files = await _session.backups.list();
     } on FileSystemException catch (e) {
-      setState(() => _camera.log.add('복원 실패: 백업 목록 ${e.message}'));
+      _session.log.add('복원 실패: 백업 목록 ${e.message}');
       return;
     }
     if (!mounted) return;
@@ -117,25 +84,19 @@ class _SlotsPageState extends State<SlotsPage> {
     );
     if (file == null) return;
     await _run('복원', () async {
-      final backup = await widget.backupStore.load(file);
-      if (backup.model != _model) {
-        _camera.log.add('복원 취소: 백업 모델(${backup.model})이 연결된 카메라($_model)와 다르다');
+      final backup = await _session.backups.load(file);
+      if (backup.model != _session.model) {
+        _session.log.add(
+          '복원 취소: 백업 모델(${backup.model})이 연결된 카메라(${_session.model})와 다르다',
+        );
         return;
       }
-      await _backupFromCamera();
-      (await _camera.restore(backup.slots)).forEach(_logResult);
+      await _session.backupFromCamera();
+      (await _session.camera.restore(backup.slots))
+          .forEach(_session.logWriteResult);
       _edits.clear();
       await _reload();
     }, clearSlotsOnError: true);
-  }
-
-  void _logResult(SlotWriteResult result) {
-    for (final warning in result.warnings) {
-      _camera.log.add('C${result.slot} $warning');
-    }
-    for (final code in result.mismatched) {
-      _camera.log.add('C${result.slot} ${propLabel(code)}: 다시 읽은 값이 다르다');
-    }
   }
 
   Future<void> _editCell(SlotSnapshot slot, int code) async {
@@ -156,50 +117,42 @@ class _SlotsPageState extends State<SlotsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Recipe Slot Manager'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Center(child: Text(_model ?? '카메라 없음')),
-          ),
-        ],
-      ),
-      body: Column(
+    return ListenableBuilder(
+      listenable: _session,
+      builder: (context, _) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _toolbar(),
           Expanded(
             child: _slots.isEmpty
-                ? const Center(child: Text('연결한 뒤 7슬롯을 읽는다'))
+                ? Center(
+                    child: Text(
+                      _session.connected
+                          ? '7슬롯을 읽는다'
+                          : '위에서 카메라를 연결한 뒤 7슬롯을 읽는다',
+                    ),
+                  )
                 : _table(),
           ),
-          _logPanel(),
         ],
       ),
     );
   }
 
   Widget _toolbar() {
-    final enabled = !_busy;
-    final connected = _model != null;
+    final enabled = _session.connected && !_session.busy;
     return Padding(
       padding: const EdgeInsets.all(8),
       child: Wrap(
         spacing: 8,
         runSpacing: 8,
         children: [
-          FilledButton(
-            onPressed: enabled && !connected ? _connect : null,
-            child: const Text('연결'),
-          ),
           OutlinedButton(
-            onPressed: enabled && connected ? _readAll : null,
+            onPressed: enabled ? _readAll : null,
             child: const Text('7슬롯 읽기'),
           ),
           OutlinedButton(
-            onPressed: enabled && connected ? _restore : null,
+            onPressed: enabled ? _restore : null,
             child: const Text('백업에서 복원'),
           ),
           for (final slot in _slots.where(
@@ -208,11 +161,6 @@ class _SlotsPageState extends State<SlotsPage> {
             FilledButton.tonal(
               onPressed: enabled ? () => _writeSlot(slot.slot) : null,
               child: Text('C${slot.slot} 쓰기'),
-            ),
-          if (_busy)
-            const SizedBox.square(
-              dimension: 24,
-              child: CircularProgressIndicator(strokeWidth: 2),
             ),
         ],
       ),
@@ -256,31 +204,12 @@ class _SlotsPageState extends State<SlotsPage> {
                           ),
                         ),
                       ),
-                      onTap: _busy ? null : () => _editCell(slot, code),
+                      onTap: _session.busy ? null : () => _editCell(slot, code),
                     ),
                 ],
               ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _logPanel() {
-    final entries = _camera.log.entries.reversed.take(30);
-    return Container(
-      height: 160,
-      width: double.infinity,
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      padding: const EdgeInsets.all(8),
-      child: ListView(
-        children: [
-          for (final (time, message) in entries)
-            Text(
-              '${time.toIso8601String().substring(11, 19)}  $message',
-              style: const TextStyle(fontFamily: 'Menlo', fontSize: 12),
-            ),
-        ],
       ),
     );
   }

@@ -1,65 +1,33 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:recipe_slot_manager/camera/fuji_camera.dart';
 import 'package:recipe_slot_manager/camera/slot_backup_store.dart';
-import 'package:recipe_slot_manager/ptp/ptp_codes.dart';
-import 'package:recipe_slot_manager/ptp/ptp_string.dart';
-import 'package:recipe_slot_manager/ui/slots_page.dart';
 
 import '../support/fake_ptp_transport.dart';
+import '../support/test_app.dart';
 
 const highlight = 0xD19D;
 
-Uint8List u16(int value) =>
-    (ByteData(2)..setUint16(0, value, Endian.little)).buffer.asUint8List();
-
 void main() {
+  late TestApp app;
   late Directory root;
   late FakePtpTransport transport;
   late SlotBackupStore store;
 
   setUp(() {
-    root = Directory.systemTemp.createTempSync('slots_page_test');
-    transport = FakePtpTransport(
-      slots: {
-        for (var slot = 1; slot <= FujiProp.slotCount; slot++)
-          slot: {
-            FujiProp.presetName: encodePtpString('Recipe $slot'),
-            for (final code in FujiProp.presetProps) code: u16(slot),
-          },
-      },
-    );
-    store = SlotBackupStore(root);
+    app = TestApp();
+    root = app.backups.directory..createSync(recursive: true);
+    transport = app.transport;
+    store = app.backups;
   });
 
-  tearDown(() => root.deleteSync(recursive: true));
+  tearDown(() => app.dispose());
 
-  Future<void> pumpPage(WidgetTester tester) async {
-    tester.view
-      ..physicalSize = const Size(1800, 1400)
-      ..devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    final camera = FujiCamera(transport, slotSwitchDelay: Duration.zero);
-    await tester.pumpWidget(
-      MaterialApp(
-        home: SlotsPage(camera: camera, backupStore: store),
-      ),
-    );
-  }
+  Future<void> pumpPage(WidgetTester tester) => app.pumpShell(tester, index: 2);
 
-  /// 버튼을 누르고, 가짜 카메라 응답과 실제 파일 입출력이 끝날 때까지 기다린다.
-  Future<void> tapAndWait(WidgetTester tester, Finder finder) async {
-    await tester.tap(finder);
-    for (var i = 0; i < 20; i++) {
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 10)),
-      );
-      await tester.pump(const Duration(milliseconds: 1));
-    }
-  }
+  Future<void> tapAndWait(WidgetTester tester, Finder finder) =>
+      TestApp.tapAndWait(tester, finder);
 
   testWidgets('연결 후 7슬롯을 읽으면 슬롯 이름이 표에 보인다', (tester) async {
     await pumpPage(tester);

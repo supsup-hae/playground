@@ -137,11 +137,46 @@ void main() {
 
     test('슬롯 선택이 거부되면 SlotWriteException 을 던진다', () async {
       transport.rejectSet[FujiProp.presetSlot] = PtpResponse.invalidParameter;
+      final target = current.copyWith(
+        props: {...current.props, highlight: u16(15)},
+      );
 
       expect(
-        () => camera.writeSlot(current, current: current),
+        () => camera.writeSlot(target, current: current),
         throwsA(isA<SlotWriteException>()),
       );
+    });
+
+    test('WB 모드, 색온도, WB 시프트를 카메라가 요구하는 순서로 쓴다', () async {
+      final target = current.copyWith(
+        props: {
+          ...current.props,
+          0xD19A: u16(3),
+          0xD19B: u16(-2 & 0xFFFF),
+          colorTemp: u16(5500),
+          0xD199: u16(0x8007),
+        },
+      );
+
+      await camera.writeSlot(target, current: current);
+
+      expect(transport.propWrites.map((c) => c.$2.first), [
+        0xD199,
+        colorTemp,
+        0xD19A,
+        0xD19B,
+      ]);
+    });
+
+    test('바뀐 값이 없으면 슬롯을 선택하지도 않는다', () async {
+      await camera.writeSlot(current, current: current);
+
+      final selects = transport.sent.where(
+        (c) =>
+            c.$1 == PtpOp.setDevicePropValue &&
+            c.$2.first == FujiProp.presetSlot,
+      );
+      expect(selects, isEmpty);
     });
 
     test('쓴 뒤 원래 선택돼 있던 슬롯으로 되돌린다', () async {
@@ -163,6 +198,44 @@ void main() {
     expect(results.every((r) => r.isClean), isTrue);
     expect(transport.propWrites.length, 7 * 25);
     expect(transport.slots[2]![highlight], backup[1].props[highlight]);
+  });
+
+  group('writeSlots', () {
+    test('바뀐 슬롯만 쓰고 원래 슬롯으로 되돌린다', () async {
+      final current = await camera.readAllSlots();
+      transport.sent.clear();
+      final targets = [
+        for (final slot in current)
+          slot.slot == 2 || slot.slot == 5
+              ? slot.copyWith(props: {...slot.props, highlight: u16(15)})
+              : slot,
+      ];
+
+      final results = await camera.writeSlots(targets, current: current);
+
+      expect(results.map((r) => r.slot), [1, 2, 3, 4, 5, 6, 7]);
+      expect(results.map((r) => r.written.length), [0, 1, 0, 0, 1, 0, 0]);
+      expect(transport.slots[2]![highlight], u16(15));
+      expect(transport.slots[5]![highlight], u16(15));
+      final selected = transport.sent
+          .where(
+            (c) =>
+                c.$1 == PtpOp.setDevicePropValue &&
+                c.$2.first == FujiProp.presetSlot,
+          )
+          .length;
+      expect(selected, 3, reason: 'C2, C5 선택 + 원래 슬롯 복귀');
+      expect(transport.currentSlot, 3);
+    });
+
+    test('전체 시간을 로그에 남긴다', () async {
+      final current = await camera.readAllSlots();
+
+      await camera.writeSlots(current, current: current);
+
+      final messages = camera.log.entries.map((e) => e.$2);
+      expect(messages, contains(startsWith('7슬롯 쓰기')));
+    });
   });
 
   test('restore 는 이름이 빈 슬롯의 이름을 덮어쓰지 않는다', () async {

@@ -107,7 +107,7 @@ When 장소를 옮기거나 특정 장면을 만나면, I want to 그 상황에 
 - 카메라 통신: 공개 표준 PTP 명령 `OpenSession 0x1002`, `GetDevicePropValue 0x1015`, `SetDevicePropValue 0x1016`. 슬롯 선택 `0xD18C`(1–7), 이름 `0xD18D`, 레시피 값 `0xD18E–0xD1A5`. 출처는 FilmKit(MIT) 문서와 `analysis.md`
 - 플랫폼 채널: macOS는 Swift + `ImageCaptureCore` `ICCameraDevice.requestSendPTPCommand`, Android는 Kotlin + `UsbManager` bulk 전송. PTP 컨테이너 조립·해석은 Dart 한 곳에 두고, 네이티브 쪽은 바이트 송수신만 맡는다
 - 레시피 모델은 카메라 속성 값과 화면 표시 값(예: 하이라이트 +1.5 ↔ 15)을 변환하는 계층을 하나 둔다. 비교 화면, 검증, EXIF·OCR 가져오기가 모두 이 모델을 쓴다
-- 저장: Supabase(Postgres + Auth)가 원본, 기기 SQLite가 캐시. 현장에서는 캐시로 동작하고 연결되면 동기화한다
+- 저장: Supabase(Postgres + Auth)가 원본, 기기 JSON 파일이 사본. 현장에서는 기기 사본으로 동작하고 연결되면 동기화한다
 - 쓰기는 바뀐 속성만 보낸다. 10초 목표와 비교 화면이 같은 diff를 쓴다
 
 **Technical Risks**
@@ -128,8 +128,8 @@ When 장소를 옮기거나 특정 장면을 만나면, I want to 그 상황에 
 
 | # | Phase | Description | Status | Parallel | Depends | PRP Plan |
 |---|-------|-------------|--------|----------|---------|----------|
-| 1 | 카메라 연결 기반 (macOS) | X-T5 USB 연결, C1–C7 읽기·쓰기·검증, 백업·복원, 왕복 시간 측정 | in-progress | - | - | [plans/phase-1-camera-link.plan.md](plans/phase-1-camera-link.plan.md) |
-| 2 | 보관함·묶음·비교 | Supabase 로그인·저장·캐시, 레시피 편집, 상황별 묶음, 비교 화면, 일괄 덮어쓰기 | pending | - | 1 | - |
+| 1 | 카메라 연결 기반 (macOS) | X-T5 USB 연결, C1–C7 읽기·쓰기·검증, 백업·복원, 왕복 시간 측정 | complete (실기기 미확인) | - | - | [plans/phase-1-camera-link.plan.md](plans/phase-1-camera-link.plan.md) |
+| 2 | 보관함·묶음·비교 | 디자인 시스템, Supabase 로그인·저장·동기화, 레시피 편집, 상황별 묶음, 비교 화면, 일괄 덮어쓰기 | complete (Supabase 연결·실기기 미확인) | - | 1 | [plans/phase-2-library.plan.md](plans/phase-2-library.plan.md) |
 | 3 | Android | 같은 기능을 Android에서 USB로 | pending | - | 2 | - |
 | 4 | 가져오기 | 카메라 슬롯 가져오기, JPEG EXIF 추출, OCR | pending | with 5 | 2 | - |
 | 5 | RAW 미리보기 | RAF 업로드 → 카메라 내부 현상 → 좌우 비교 | pending | with 4 | 2 | - |
@@ -185,6 +185,9 @@ When 장소를 옮기거나 특정 장면을 만나면, I want to 그 상황에 
 |----------|--------|--------------|-----------|
 | 스택 | Flutter + Supabase | 웹(Next.js), SwiftUI | macOS와 Android를 한 코드로. 사용자 선택 |
 | 저장 | Supabase 원본 + 기기 캐시 | 기기 전용, Supabase 전용 | 사용자는 처음부터 클라우드를 원함. 현장 오프라인 때문에 캐시 필요 |
+| 기기 사본 형식 | JSON 파일 | SQLite | 레코드가 수십 개 규모. 1단계의 원자적 JSON 저장을 그대로 씀 (2026-10-17) |
+| 디자인 시스템 | 2단계에 포함, 카메라 다이얼풍 어두운 테마 | 나중에, 밝은 사진 앱풍 | 사용자 결정 (2026-10-17) |
+| 실기기 시험 | 2단계는 가짜 전송으로 검증 | 실기기 확인 뒤 진행 | 사용자가 카메라 시험을 할 수 없음 (2026-10-17). 1단계 열린 질문은 유지 |
 | 첫 플랫폼 | macOS → Android | Android 먼저 | macOS는 `ImageCaptureCore` 경로가 확인되어 있어 연결 검증이 빠르다 |
 | Android 순서 | 2단계 직후 | 마지막 | 실제 사용 상황이 현장 이동 중이다 |
 | 카메라 연결 | USB PTP 먼저, BLE는 조사 후 | BLE 먼저 | USB는 공개 자료가 있고, BLE는 없다 |
