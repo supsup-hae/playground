@@ -46,3 +46,6 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Supabase 접속 정보 (supabase.example.json 참고)
+supabase.json
