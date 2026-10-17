@@ -38,6 +38,8 @@ class _DesignGalleryPageState extends State<DesignGalleryPage> {
                 ('accent', AppColors.accent),
                 ('danger', AppColors.danger),
                 ('success', AppColors.success),
+                ('brandRed', AppColors.brandRed),
+                ('silver', AppColors.silver),
               ])
                 _Swatch(name: name, color: color),
             ],

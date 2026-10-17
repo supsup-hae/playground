@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
-/// 카메라 다이얼풍 어두운 테마의 색. 강조색(다이얼 주황)은 선택·바뀐 값·바늘에만 쓴다.
+/// 카메라 다이얼풍 어두운 테마의 색. 강조색(인덱스 빨강)은 선택·바뀐 값·바늘에만 쓴다.
+/// 브랜드 기준은 `assets/brand/README.md`.
 abstract final class AppColors {
   static const background = Color(0xFF0F1012);
   static const surface = Color(0xFF17191C);
@@ -8,9 +9,19 @@ abstract final class AppColors {
   static const line = Color(0xFF2A2D31);
   static const text = Color(0xFFECE9E4);
   static const textMuted = Color(0xFF9A9690);
-  static const accent = Color(0xFFF08A24);
-  static const danger = Color(0xFFE5484D);
+
+  /// 앱 화면용 빨강. 어두운 바탕·면 위에서 4.5:1 이 되도록 [brandRed] 보다 밝다.
+  static const accent = Color(0xFFEA4A35);
+
+  /// 경고·실패. 강조색이 빨강이므로 색상과 밝기 모두 강조색과 다른 앰버를 쓴다.
+  static const danger = Color(0xFFF2A93B);
   static const success = Color(0xFF3FB27F);
+
+  /// 아이콘·로고·인쇄용 브랜드 빨강. 작은 글자에는 쓰지 않는다.
+  static const brandRed = Color(0xFFD7282F);
+
+  /// 아이콘의 실버 상판.
+  static const silver = Color(0xFFCFCBC4);
 }
 
 abstract final class AppSpacing {

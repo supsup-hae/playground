@@ -26,10 +26,18 @@ void main() {
         AppColors.text,
         AppColors.textMuted,
         AppColors.accent,
+        AppColors.danger,
       ]) {
         expect(_contrast(foreground, background), greaterThanOrEqualTo(4.5));
       }
     }
+  });
+
+  test('경고색은 강조색과 밝기로도 구분된다 (흑백·색각 이상에서도)', () {
+    expect(
+      _contrast(AppColors.danger, AppColors.accent),
+      greaterThanOrEqualTo(1.5),
+    );
   });
 
   group('KnobSelector', () {
