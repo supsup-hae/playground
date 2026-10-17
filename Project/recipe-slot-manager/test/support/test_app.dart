@@ -49,25 +49,42 @@ class TestApp {
 
   void dispose() => root.deleteSync(recursive: true);
 
-  static void useLargeWindow(WidgetTester tester) {
+  static const largeWindow = Size(1800, 1400);
+
+  /// 화면 크기를 논리 픽셀로 정한다.
+  static void useWindow(WidgetTester tester, [Size size = largeWindow]) {
     tester.view
-      ..physicalSize = const Size(1800, 1400)
+      ..physicalSize = size
       ..devicePixelRatio = 1;
     addTearDown(tester.view.reset);
   }
 
-  Future<void> pumpShell(WidgetTester tester, {int index = 0}) async {
-    useLargeWindow(tester);
+  Future<void> pumpShell(
+    WidgetTester tester, {
+    int index = 0,
+    Size size = largeWindow,
+    List<Widget> headerActions = const [],
+  }) async {
+    useWindow(tester, size);
     await tester.pumpWidget(
       MaterialApp(
         theme: buildAppTheme(),
-        home: AppShell(session: session, library: library, initialIndex: index),
+        home: AppShell(
+          session: session,
+          library: library,
+          initialIndex: index,
+          headerActions: headerActions,
+        ),
       ),
     );
   }
 
-  Future<void> pumpPage(WidgetTester tester, Widget page) async {
-    useLargeWindow(tester);
+  Future<void> pumpPage(
+    WidgetTester tester,
+    Widget page, {
+    Size size = largeWindow,
+  }) async {
+    useWindow(tester, size);
     await tester.pumpWidget(MaterialApp(theme: buildAppTheme(), home: page));
   }
 

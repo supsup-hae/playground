@@ -26,4 +26,20 @@ void main() {
 
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('지금 화면의 논리 크기와 배율을 보인다', (tester) async {
+    tester.view
+      ..physicalSize = const Size(1236, 2745)
+      ..devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(),
+        home: const Scaffold(body: DesignGalleryPage()),
+      ),
+    );
+
+    expect(find.text('화면 412 × 915 dp, 배율 3.0'), findsOneWidget);
+  });
 }

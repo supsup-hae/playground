@@ -111,6 +111,32 @@ void main() {
       final value = tester.widget<Text>(find.text('+2'));
       expect(value.style?.color, isNot(AppColors.accent));
     });
+
+    testWidgets('넓은 폭에서는 값이 줄 오른쪽 끝에 붙는다', (tester) async {
+      await tester.pumpWidget(
+        _app(const ChangeRow(label: '하이라이트', before: '-1', after: '+0.5')),
+      );
+
+      final rowRight = tester.getTopRight(find.byType(ChangeRow)).dx;
+      expect(tester.getTopRight(find.text('+0.5')).dx, closeTo(rowRight, 1));
+    });
+
+    testWidgets('좁은 폭에서 긴 값은 넘치지 않고 말줄임으로 줄인다', (tester) async {
+      await tester.pumpWidget(
+        _app(
+          const SizedBox(
+            width: 240,
+            child: ChangeRow(
+              label: '필름 시뮬레이션',
+              before: 'Classic Negative',
+              after: 'Nostalgic Negative',
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+    });
   });
 
   testWidgets('SlotBadge 는 C 번호를 보인다', (tester) async {

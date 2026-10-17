@@ -8,7 +8,18 @@ import 'package:recipe_slot_manager/ui/log_panel.dart';
 import 'package:recipe_slot_manager/ui/recipe_list_page.dart';
 import 'package:recipe_slot_manager/ui/slots_page.dart';
 
-/// 왼쪽 탐색, 위쪽 카메라 연결 막대, 아래쪽 작업 로그로 된 앱의 바깥 틀.
+/// 화면 목적지. 넓은 창의 레일과 좁은 화면의 아래 탭이 같은 목록을 쓴다.
+const _destinations = [
+  (Icons.tune, '레시피'),
+  (Icons.view_week_outlined, '묶음'),
+  (Icons.table_chart_outlined, '원시 값'),
+  (Icons.palette_outlined, '디자인'),
+];
+
+/// 위쪽 카메라 연결 막대, 아래쪽 작업 로그, 화면 탐색으로 된 앱의 바깥 틀.
+///
+/// 폭이 [compactWidth] 보다 좁거나 높이가 [compactHeight] 보다 낮으면(휴대폰) 아래 탭과
+/// 접힌 로그를 쓰고, 그 밖에는 왼쪽 레일과 펼친 로그를 쓴다.
 class AppShell extends StatefulWidget {
   const AppShell({
     super.key,
@@ -17,6 +28,9 @@ class AppShell extends StatefulWidget {
     this.headerActions = const [],
     this.initialIndex = 0,
   });
+
+  static const compactWidth = 600.0;
+  static const compactHeight = 500.0;
 
   final CameraSession session;
   final LibraryStore library;
@@ -32,55 +46,63 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   late var _index = widget.initialIndex;
 
+  void _select(int index) => setState(() => _index = index);
+
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    final compact =
+        size.width < AppShell.compactWidth ||
+        size.height < AppShell.compactHeight;
     final page = switch (_index) {
       0 => RecipeListPage(library: widget.library),
       1 => LoadoutListPage(library: widget.library, session: widget.session),
       2 => SlotsPage(session: widget.session),
       _ => const DesignGalleryPage(),
     };
+    final content = Column(
+      children: [
+        CameraBar(session: widget.session, actions: widget.headerActions),
+        const Divider(height: 1),
+        Expanded(child: page),
+        LogPanel(log: widget.session.log, compact: compact),
+      ],
+    );
+
+    if (compact) {
+      return Scaffold(
+        // 아래 여백(제스처 막대)은 NavigationBar 가 맡는다.
+        body: SafeArea(bottom: false, child: content),
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: _index,
+          onDestinationSelected: _select,
+          destinations: [
+            for (final (icon, label) in _destinations)
+              NavigationDestination(icon: Icon(icon), label: label),
+          ],
+        ),
+      );
+    }
     return Scaffold(
-      body: Row(
-        children: [
-          NavigationRail(
-            selectedIndex: _index,
-            labelType: NavigationRailLabelType.all,
-            onDestinationSelected: (i) => setState(() => _index = i),
-            destinations: const [
-              NavigationRailDestination(
-                icon: Icon(Icons.tune),
-                label: Text('레시피'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.view_week_outlined),
-                label: Text('묶음'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.table_chart_outlined),
-                label: Text('원시 값'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.palette_outlined),
-                label: Text('디자인'),
-              ),
-            ],
-          ),
-          const VerticalDivider(width: 1),
-          Expanded(
-            child: Column(
-              children: [
-                CameraBar(
-                  session: widget.session,
-                  actions: widget.headerActions,
-                ),
-                const Divider(height: 1),
-                Expanded(child: page),
-                LogPanel(log: widget.session.log),
+      body: SafeArea(
+        child: Row(
+          children: [
+            NavigationRail(
+              selectedIndex: _index,
+              labelType: NavigationRailLabelType.all,
+              onDestinationSelected: _select,
+              destinations: [
+                for (final (icon, label) in _destinations)
+                  NavigationRailDestination(
+                    icon: Icon(icon),
+                    label: Text(label),
+                  ),
               ],
             ),
-          ),
-        ],
+            const VerticalDivider(width: 1),
+            Expanded(child: content),
+          ],
+        ),
       ),
     );
   }
