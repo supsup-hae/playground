@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- tool/app_icon.py 가 만든다. 직접 고치지 말 것 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="256" android:viewportHeight="256">
+    <group android:pivotX="128" android:pivotY="128" android:scaleX="0.62" android:scaleY="0.62" android:translateY="-3">
+        <path android:fillColor="#FFFFFF" android:pathData="M27.3 102A104 104 0 0 1 230.76 112L148 112A10 10 0 0 0 138 102Z"/>
+        <path android:fillColor="#FFFFFF" android:pathData="M230.76 112L148 112A10 10 0 0 1 138 122L24.17 122A104 104 0 1 0 230.76 112Z"/>
+        <path android:fillColor="#FFFFFF" android:pathData="M35.5 112A4.5 4.5 0 1 0 44.5 112A4.5 4.5 0 1 0 35.5 112Z"/>
+        <path android:fillColor="#FFFFFF" android:pathData="M51.5 112A4.5 4.5 0 1 0 60.5 112A4.5 4.5 0 1 0 51.5 112Z"/>
+        <path android:fillColor="#FFFFFF" android:pathData="M67.5 112A4.5 4.5 0 1 0 76.5 112A4.5 4.5 0 1 0 67.5 112Z"/>
+        <path android:fillColor="#FFFFFF" android:pathData="M83.5 112A4.5 4.5 0 1 0 92.5 112A4.5 4.5 0 1 0 83.5 112Z"/>
+        <path android:fillColor="#FFFFFF" android:pathData="M99.5 112A4.5 4.5 0 1 0 108.5 112A4.5 4.5 0 1 0 99.5 112Z"/>
+        <path android:fillColor="#FFFFFF" android:pathData="M115.5 112A4.5 4.5 0 1 0 124.5 112A4.5 4.5 0 1 0 115.5 112Z"/>
+        <path android:fillColor="#FFFFFF" android:pathData="M131.5 112A4.5 4.5 0 1 0 140.5 112A4.5 4.5 0 1 0 131.5 112Z"/>
+    </group>
+</vector>

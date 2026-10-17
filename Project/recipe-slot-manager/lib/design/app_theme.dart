@@ -15,7 +15,7 @@ ThemeData buildAppTheme() {
     outline: AppColors.line,
     outlineVariant: AppColors.line,
     error: AppColors.danger,
-    onError: AppColors.text,
+    onError: AppColors.background,
   );
   final shape = RoundedRectangleBorder(
     borderRadius: BorderRadius.circular(AppRadius.md),
