@@ -35,6 +35,17 @@ void main() {
     camera = FujiCamera(transport, slotSwitchDelay: Duration.zero);
   });
 
+  test('다시 연결하면 첫 명령의 transaction ID 가 1 부터 다시 시작한다', () async {
+    await camera.connect();
+    await camera.readAllSlots();
+    transport.transactionIds.clear();
+
+    await camera.connect();
+    await camera.readAllSlots();
+
+    expect(transport.transactionIds.first, 1);
+  });
+
   group('readAllSlots', () {
     test('C1–C7의 이름과 속성 24개를 읽는다', () async {
       final slots = await camera.readAllSlots();
