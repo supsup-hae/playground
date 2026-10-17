@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:recipe_slot_manager/design/app_theme.dart';
 import 'package:recipe_slot_manager/design/dial_scale.dart';
+import 'package:recipe_slot_manager/util/step_value.dart';
 
 void main() {
   group('snapToStep', () {
