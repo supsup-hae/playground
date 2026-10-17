@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 import 'package:recipe_slot_manager/camera/slot_snapshot.dart';
+import 'package:recipe_slot_manager/util/atomic_json.dart';
 
 /// 7슬롯 백업을 JSON 파일로 저장하고 불러온다.
 ///
@@ -17,22 +18,14 @@ class SlotBackupStore {
 
   Future<File> save(String model, List<SlotSnapshot> slots) async {
     final createdAt = _clock().toUtc();
-    await directory.create(recursive: true);
     final file = File(
       p.join(directory.path, 'slots-${_stamp(createdAt)}.json'),
     );
-    final json = {
+    return writeJsonAtomically(file, {
       'model': model,
       'createdAt': createdAt.toIso8601String(),
       'slots': [for (final slot in slots) slot.toJson()],
-    };
-    // 쓰는 도중 멈춰도 잘린 파일이 최신 백업으로 보이지 않게 임시 파일에 쓰고 옮긴다.
-    final temp = File('${file.path}.tmp');
-    await temp.writeAsString(
-      const JsonEncoder.withIndent('  ').convert(json),
-      flush: true,
-    );
-    return temp.rename(file.path);
+    });
   }
 
   /// 최신 백업이 먼저 온다.

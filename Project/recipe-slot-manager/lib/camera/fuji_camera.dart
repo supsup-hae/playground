@@ -25,6 +25,9 @@ class FujiCamera {
   var _transactionId = 0;
   var _roundTrips = 0;
 
+  /// 지금 작업에서 슬롯을 선택했는지. 끝날 때 원래 슬롯으로 되돌릴지 정한다.
+  var _slotChanged = false;
+
   Future<String> connect() async {
     final model = await _transport.connect();
     log.add('$model 연결');
@@ -49,6 +52,22 @@ class FujiCamera {
     SlotSnapshot target, {
     SlotSnapshot? current,
   }) => _keepingSelectedSlot(() => _writeSlot(target, current));
+
+  /// 여러 슬롯을 한 번에 쓴다. 슬롯마다 [current] 에서 같은 번호의 스냅숏과 비교해
+  /// 바뀐 값만 쓰고, 바뀐 값이 없는 슬롯은 선택하지 않는다. 중간에 실패하면 그대로 던진다.
+  Future<List<SlotWriteResult>> writeSlots(
+    List<SlotSnapshot> targets, {
+    required List<SlotSnapshot> current,
+  }) => _keepingSelectedSlot(() async {
+    final timing = _startTiming();
+    final bySlot = {for (final slot in current) slot.slot: slot};
+    final results = [
+      for (final target in targets)
+        await _writeSlot(target, bySlot[target.slot]),
+    ];
+    _logTiming('7슬롯 쓰기', timing);
+    return results;
+  });
 
   /// 백업의 모든 슬롯에 모든 값을 쓴다.
   Future<List<SlotWriteResult>> restore(List<SlotSnapshot> backup) =>
@@ -86,15 +105,25 @@ class FujiCamera {
     SlotSnapshot? current,
   ) async {
     final timing = _startTiming();
-    await _selectSlot(target.slot);
-
     final values = <int, Uint8List>{
       // 이름을 읽지 못한 슬롯은 빈 이름이 되므로, 빈 이름으로 덮어쓰지 않는다.
       if (target.name.isNotEmpty && target.name != current?.name)
         FujiProp.presetName: encodePtpString(target.name),
-      for (final MapEntry(:key, :value) in target.props.entries)
-        if (!listEquals(current?.props[key], value)) key: value,
+      for (final code in FujiProp.writeOrder)
+        if (target.props[code] case final value?
+            when !listEquals(current?.props[code], value))
+          code: value,
     };
+    if (values.isEmpty) {
+      return SlotWriteResult(
+        slot: target.slot,
+        written: const [],
+        warnings: const [],
+        mismatched: const [],
+        elapsed: Duration.zero,
+      );
+    }
+    await _selectSlot(target.slot);
 
     final written = <int>[];
     final warnings = <String>[];
@@ -124,10 +153,12 @@ class FujiCamera {
 
   Future<T> _keepingSelectedSlot<T>(Future<T> Function() action) async {
     final original = await _getProp(FujiProp.presetSlot);
+    _slotChanged = false;
     try {
       return await action();
     } finally {
-      if (original != null) {
+      // 슬롯을 한 번도 바꾸지 않았으면 되돌릴 필요가 없다.
+      if (original != null && _slotChanged) {
         final code = await _setProp(FujiProp.presetSlot, original);
         if (code != PtpResponse.ok) {
           log.add('원래 슬롯 복귀 실패 (0x${code.toRadixString(16)})');
@@ -140,6 +171,7 @@ class FujiCamera {
     final value = (ByteData(
       2,
     )..setUint16(0, slot, Endian.little)).buffer.asUint8List();
+    _slotChanged = true;
     final code = await _setProp(FujiProp.presetSlot, value);
     if (code != PtpResponse.ok) {
       throw SlotWriteException('C$slot 선택 거부 (0x${code.toRadixString(16)})');
