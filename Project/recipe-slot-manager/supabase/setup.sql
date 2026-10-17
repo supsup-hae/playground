@@ -30,6 +30,7 @@ comment on column public.loadouts.deleted_at is '삭제한 시각. 행은 지우
 create index if not exists recipes_user_updated_idx on public.recipes (user_id, updated_at);
 create index if not exists loadouts_user_updated_idx on public.loadouts (user_id, updated_at);
 
+revoke all on public.recipes, public.loadouts from anon, authenticated;
 grant select, insert, update on public.recipes to authenticated;
 grant select, insert, update on public.loadouts to authenticated;
 
