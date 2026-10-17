@@ -172,6 +172,23 @@ void main() {
     });
   });
 
+  test('범위·선택지에 맞지 않는 값이나 너무 긴 이름은 카메라 값을 만들지 않고 FormatException', () {
+    final slot = classicNegSlot();
+
+    expect(
+      () => encodeValues(slot.name, {'highlight': 9}, base: slot),
+      throwsFormatException,
+    );
+    expect(
+      () => encodeValues(slot.name, {'noiseReduction': 7}, base: slot),
+      throwsFormatException,
+    );
+    expect(
+      () => encodeValues('a' * 255, const {}, base: slot),
+      throwsFormatException,
+    );
+  });
+
   test('필드 표의 속성 코드는 겹치지 않는다', () {
     final props = recipeFields.map((f) => f.prop).toList();
     expect(props.toSet().length, props.length);

@@ -120,10 +120,46 @@ void main() {
     expect(notified, 1);
   });
 
-  test('깨진 파일은 FormatException', () async {
+  test('깨진 파일은 덮어쓰지 않고 옮겨 두며, 다른 파일은 그대로 읽는다', () async {
+    final first = newStore();
+    await first.load();
+    await first.saveLoadout(
+      Loadout(
+        id: 'l1',
+        name: '여행',
+        slots: const [null, null, null, null, null, null, null],
+        updatedAt: now,
+      ),
+    );
     File(p.join(root.path, 'recipes.json')).writeAsStringSync('{"recipes": 1}');
 
-    expect(newStore().load(), throwsFormatException);
+    final store = newStore();
+    await store.load();
+    await store.saveRecipe(recipe('r1', 'New'));
+
+    expect(store.loadErrors.single, contains('recipes.json'));
+    expect(store.loadouts.single.name, '여행');
+    final quarantined = root
+        .listSync()
+        .map((e) => p.basename(e.path))
+        .where((n) => n.startsWith('recipes.json.corrupt-'));
+    expect(quarantined, hasLength(1));
+    final kept = File(p.join(root.path, quarantined.single)).readAsStringSync();
+    expect(kept, '{"recipes": 1}');
+  });
+
+  test('같은 파일에 동시에 저장해도 둘 다 끝나고 파일은 마지막 상태다', () async {
+    final store = newStore();
+    await store.load();
+
+    await Future.wait([
+      store.saveRecipe(recipe('r1', 'One')),
+      store.saveRecipe(recipe('r2', 'Two')),
+    ]);
+
+    final reloaded = newStore();
+    await reloaded.load();
+    expect(reloaded.recipes.map((r) => r.name), ['One', 'Two']);
   });
 
   group('mergeRemote', () {

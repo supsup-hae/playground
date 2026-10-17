@@ -117,6 +117,19 @@ void main() {
       expect(find.text('그대로'), findsNWidgets(6));
     });
 
+    testWidgets('쓰기가 실패하면 비교를 비우고 다시 읽게 하며 로그에 남긴다', (tester) async {
+      await prepare(tester);
+      app.transport.rejectSet[0xD18C] = 0x201D;
+
+      await TestApp.tapAndWait(tester, find.text('7슬롯 쓰기'));
+
+      expect(find.text('다시 읽기'), findsOneWidget);
+      expect(
+        app.session.log.entries.map((e) => e.$2),
+        contains(startsWith('7슬롯 쓰기 실패')),
+      );
+    });
+
     testWidgets('7슬롯 쓰기는 백업을 남기고, 레시피가 있는 슬롯만 쓰고, 걸린 시간을 보인다', (tester) async {
       await prepare(tester);
       app.transport.sent.clear();

@@ -12,8 +12,8 @@ final class RemoteChanges {
 
 /// 로그인한 사용자의 원격 보관함.
 abstract interface class RemoteLibrary {
-  /// [since] 보다 늦게 바뀐 행. [since] 가 null 이면 전부.
-  Future<RemoteChanges> fetchSince(DateTime? since);
+  /// 사용자의 모든 행. 삭제 표시가 있는 행도 포함한다.
+  Future<RemoteChanges> fetchAll();
 
   /// id 가 같은 행은 덮어쓴다.
   Future<void> upsert({
@@ -29,18 +29,26 @@ class SupabaseRemoteLibrary implements RemoteLibrary {
 
   final SupabaseClient _client;
 
+  /// PostgREST 가 한 번에 돌려주는 최대 행 수.
+  static const _pageSize = 1000;
+
   @override
-  Future<RemoteChanges> fetchSince(DateTime? since) async => RemoteChanges(
-    recipes: await _bodies('recipes', since),
-    loadouts: await _bodies('loadouts', since),
+  Future<RemoteChanges> fetchAll() async => RemoteChanges(
+    recipes: await _bodies('recipes'),
+    loadouts: await _bodies('loadouts'),
   );
 
-  Future<List<Object?>> _bodies(String table, DateTime? since) async {
-    final query = _client.from(table).select('body');
-    final rows = since == null
-        ? await query
-        : await query.gt('updated_at', since.toUtc().toIso8601String());
-    return [for (final row in rows) row['body']];
+  Future<List<Object?>> _bodies(String table) async {
+    final bodies = <Object?>[];
+    for (var from = 0; ; from += _pageSize) {
+      final rows = await _client
+          .from(table)
+          .select('body')
+          .order('id')
+          .range(from, from + _pageSize - 1);
+      bodies.addAll([for (final row in rows) row['body']]);
+      if (rows.length < _pageSize) return bodies;
+    }
   }
 
   @override

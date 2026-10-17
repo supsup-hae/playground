@@ -46,8 +46,14 @@ class LibraryStore extends ChangeNotifier {
     for (final id in loadout.slots) recipeById(id),
   ];
 
-  /// 파일이 없으면 빈 보관함. 형식이 맞지 않으면 [FormatException].
+  /// 불러올 때 읽지 못해 옮겨 둔 파일 설명. 다음 [load] 에서 비워진다.
+  List<String> get loadErrors => List.unmodifiable(_loadErrors);
+  final _loadErrors = <String>[];
+
+  /// 파일이 없으면 빈 보관함. 형식이 맞지 않는 파일은 덮어쓰지 않도록
+  /// `<이름>.corrupt-<시각>` 으로 옮기고 [loadErrors] 에 남긴 뒤, 그 파일은 비어 있는 것으로 본다.
   Future<void> load() async {
+    _loadErrors.clear();
     final recipes = await _read(_recipeFile, 'recipes', Recipe.fromJson);
     final loadouts = await _read(_loadoutFile, 'loadouts', Loadout.fromJson);
     _recipes
@@ -134,18 +140,27 @@ class LibraryStore extends ChangeNotifier {
     'loadouts': [for (final l in _loadouts.values) l.toJson()],
   };
 
-  static Future<List<T>> _read<T>(
+  Future<List<T>> _read<T>(
     File file,
     String key,
     T Function(Object?) parse,
   ) async {
     if (!await file.exists()) return [];
-    final json = jsonDecode(await file.readAsString());
-    if (json case final Map<String, dynamic> map) {
-      if (map[key] case final List<dynamic> rows) {
-        return [for (final row in rows) parse(row)];
+    try {
+      final json = jsonDecode(await file.readAsString());
+      if (json case final Map<String, dynamic> map) {
+        if (map[key] case final List<dynamic> rows) {
+          return [for (final row in rows) parse(row)];
+        }
       }
+      throw FormatException('$key 파일 형식이 맞지 않다', file.path);
+    } on FormatException catch (e) {
+      final stamp = _clock().toUtc().toIso8601String().replaceAll(':', '-');
+      final moved = await file.rename('${file.path}.corrupt-$stamp');
+      _loadErrors.add(
+        '${p.basename(file.path)} 를 읽지 못해 ${p.basename(moved.path)} 로 옮겼다: ${e.message}',
+      );
+      return [];
     }
-    throw FormatException('$key 파일 형식이 맞지 않다', file.path);
   }
 }

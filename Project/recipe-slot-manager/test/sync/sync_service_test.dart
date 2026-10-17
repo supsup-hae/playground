@@ -9,20 +9,20 @@ import 'package:recipe_slot_manager/recipe/recipe.dart';
 import 'package:recipe_slot_manager/sync/remote_library.dart';
 import 'package:recipe_slot_manager/sync/sync_service.dart';
 
-/// 올린 행을 기록하고, 정해 둔 원격 행을 돌려주는 가짜 원격 보관함.
+/// id 별 body 를 들고 있는 가짜 원격 보관함. 올린 행은 그대로 저장한다.
 class FakeRemote implements RemoteLibrary {
+  final recipeRows = <String, Object?>{};
+  final loadoutRows = <String, Object?>{};
   final uploadedRecipes = <List<String>>[];
-  final uploadedLoadouts = <List<String>>[];
-  final fetchedSince = <DateTime?>[];
-  var recipeRows = <Object?>[];
-  var loadoutRows = <Object?>[];
   Exception? failure;
 
   @override
-  Future<RemoteChanges> fetchSince(DateTime? since) async {
+  Future<RemoteChanges> fetchAll() async {
     if (failure case final error?) throw error;
-    fetchedSince.add(since);
-    return RemoteChanges(recipes: recipeRows, loadouts: loadoutRows);
+    return RemoteChanges(
+      recipes: recipeRows.values.toList(),
+      loadouts: loadoutRows.values.toList(),
+    );
   }
 
   @override
@@ -32,96 +32,129 @@ class FakeRemote implements RemoteLibrary {
   }) async {
     if (failure case final error?) throw error;
     uploadedRecipes.add([for (final r in recipes) r.id]);
-    uploadedLoadouts.add([for (final l in loadouts) l.id]);
+    for (final r in recipes) {
+      recipeRows[r.id] = r.toJson();
+    }
+    for (final l in loadouts) {
+      loadoutRows[l.id] = l.toJson();
+    }
   }
 }
+
+final idA = 'a' * 32;
+final idB = 'b' * 32;
 
 void main() {
   late Directory root;
   late DateTime now;
-  late LibraryStore library;
   late FakeRemote remote;
-  late CameraLog log;
 
-  SyncService newService() => SyncService(
+  LibraryStore newLibrary(String name) =>
+      LibraryStore(Directory(p.join(root.path, name)), clock: () => now);
+
+  SyncService newService(LibraryStore library, {CameraLog? log}) => SyncService(
     library: library,
     remote: remote,
-    log: log,
-    stateFile: File(p.join(root.path, 'sync.json')),
+    log: log ?? CameraLog(),
+    stateFile: File(p.join(library.directory.path, 'sync.json')),
     clock: () => now,
   );
 
-  Recipe recipe(String id, String name, DateTime at) =>
-      Recipe(id: id, name: name, values: const {'highlight': 1}, updatedAt: at);
+  Recipe recipe(String id, String name) => Recipe(
+    id: id,
+    name: name,
+    values: const {'highlight': 1},
+    updatedAt: DateTime.utc(2000),
+  );
 
-  setUp(() async {
+  setUp(() {
     root = Directory.systemTemp.createTempSync('sync_service_test');
     now = DateTime.utc(2026, 10, 17, 9);
-    library = LibraryStore(
-      Directory(p.join(root.path, 'library')),
-      clock: () => now,
-    );
-    await library.load();
     remote = FakeRemote();
-    log = CameraLog();
   });
 
   tearDown(() => root.deleteSync(recursive: true));
 
-  test('처음 동기화는 로컬 행을 모두 올리고, 원격 행을 합치고, 시각을 남긴다', () async {
-    await library.saveRecipe(recipe('a' * 32, 'Local', now));
-    remote.recipeRows = [
-      recipe('b' * 32, 'Remote', DateTime.utc(2026, 10, 17, 8)).toJson(),
-    ];
-    final service = newService();
-    await service.loadState();
+  test('원격 행을 합치고, 원격에 없는 기기 행을 올리고, 시각을 남긴다', () async {
+    final library = newLibrary('a');
+    await library.load();
+    await library.saveRecipe(recipe(idA, 'Local'));
+    remote.recipeRows[idB] = recipe(idB, 'Remote').toJson();
+    final service = newService(library);
 
     expect(await service.sync(), isTrue);
 
-    expect(remote.uploadedRecipes.single, ['a' * 32]);
-    expect(remote.fetchedSince.single, isNull);
     expect(library.recipes.map((r) => r.name), ['Local', 'Remote']);
+    expect(remote.uploadedRecipes.single, [idA]);
     expect(service.lastSyncAt, now);
-    final reloaded = newService();
+    final reloaded = newService(library);
     await reloaded.loadState();
     expect(reloaded.lastSyncAt, now);
   });
 
-  test('다음 동기화는 마지막 동기화 이후 바뀐 행만 올리고 그 이후만 받는다', () async {
-    await library.saveRecipe(recipe('a' * 32, 'Old', now));
-    final service = newService();
-    await service.loadState();
-    await service.sync();
-    final firstSync = now;
+  test('오프라인에서 먼저 고친 기기가 늦게 동기화해도 다른 기기의 더 최근 수정을 덮어쓰지 않는다', () async {
+    final deviceA = newLibrary('a');
+    final deviceB = newLibrary('b');
+    await deviceA.load();
+    await deviceB.load();
+    await deviceA.saveRecipe(recipe(idA, 'Original'));
+    await newService(deviceA).sync();
+    await newService(deviceB).sync();
 
-    now = now.add(const Duration(minutes: 5));
-    await library.saveRecipe(recipe('c' * 32, 'New', now));
-    await service.sync();
+    now = DateTime.utc(2026, 10, 17, 10);
+    await deviceA.saveRecipe(
+      deviceA.recipes.single.copyWith(name: 'A 10시', updatedAt: now),
+    );
+    now = DateTime.utc(2026, 10, 17, 11);
+    await deviceB.saveRecipe(
+      deviceB.recipes.single.copyWith(name: 'B 11시', updatedAt: now),
+    );
+    await newService(deviceB).sync();
 
-    expect(remote.uploadedRecipes.last, ['c' * 32]);
-    expect(remote.fetchedSince.last, firstSync);
+    now = DateTime.utc(2026, 10, 17, 12);
+    await newService(deviceA).sync();
+
+    expect(deviceA.recipes.single.name, 'B 11시');
+    expect(Recipe.fromJson(remote.recipeRows[idA]).name, 'B 11시');
   });
 
-  test('형식이 맞지 않는 원격 행은 건너뛰고 나머지를 합친다', () async {
-    remote.recipeRows = [
-      {'broken': true},
-      recipe('b' * 32, 'Remote', now).toJson(),
-    ];
-    remote.loadoutRows = [
-      {'slots': []},
-    ];
-    final service = newService();
+  test('다른 기기 시계가 늦어도, 마지막 동기화 시각보다 이른 원격 행을 받는다', () async {
+    final library = newLibrary('a');
+    await library.load();
+    final service = newService(library);
+    await service.sync();
 
-    expect(await service.sync(), isTrue);
+    remote.recipeRows[idB] = recipe(idB, '시계가 늦은 기기').toJson();
+    now = now.add(const Duration(hours: 1));
+    await service.sync();
 
-    expect(library.recipes.single.name, 'Remote');
+    expect(library.recipes.single.name, '시계가 늦은 기기');
+  });
+
+  test('형식이 맞지 않는 원격 행은 건너뛰고, 그 id 의 기기 행으로 덮어쓰지도 않는다', () async {
+    final library = newLibrary('a');
+    await library.load();
+    await library.saveRecipe(recipe(idA, 'Local'));
+    final broken = {'id': idA, 'name': 'newer app', 'values': 'unknown'};
+    remote.recipeRows[idA] = broken;
+    remote.recipeRows[idB] = recipe(idB, 'Remote').toJson();
+    remote.loadoutRows['x'] = {'slots': []};
+    final log = CameraLog();
+
+    expect(await newService(library, log: log).sync(), isTrue);
+
+    expect(library.recipes.map((r) => r.name), ['Local', 'Remote']);
+    expect(remote.recipeRows[idA], broken);
     expect(log.entries.last.$2, contains('건너뜀 2'));
   });
 
   test('원격에 닿지 못하면 기기 데이터와 동기화 시각은 그대로 두고 로그에 남긴다', () async {
-    await library.saveRecipe(recipe('a' * 32, 'Local', now));
+    final library = newLibrary('a');
+    await library.load();
+    await library.saveRecipe(recipe(idA, 'Local'));
     remote.failure = const SocketException('offline');
-    final service = newService();
+    final log = CameraLog();
+    final service = newService(library, log: log);
 
     expect(await service.sync(), isFalse);
 

@@ -25,11 +25,8 @@ Future<void> main() async {
     SlotBackupStore(Directory(p.join(support.path, 'backups'))),
   );
   final library = LibraryStore(Directory(p.join(support.path, 'library')));
-  try {
-    await library.load();
-  } on FormatException catch (e) {
-    session.log.add('보관함을 읽지 못했다: ${e.message}');
-  }
+  await library.load();
+  library.loadErrors.forEach(session.log.add);
 
   SyncService? sync;
   GoTrueClient? auth;

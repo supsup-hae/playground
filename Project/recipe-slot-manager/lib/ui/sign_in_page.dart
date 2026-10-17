@@ -43,6 +43,8 @@ class _SignInPageState extends State<SignInPage> {
       }
     } on AuthException catch (e) {
       if (mounted) setState(() => _message = e.message);
+    } on Exception catch (e) {
+      if (mounted) setState(() => _message = '서버에 닿지 못했다: $e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }

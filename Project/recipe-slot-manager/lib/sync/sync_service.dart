@@ -11,9 +11,10 @@ import 'package:recipe_slot_manager/util/atomic_json.dart';
 
 /// 기기 보관함과 원격 보관함을 맞춘다.
 ///
-/// 마지막 동기화 이후 바뀐 기기 행을 올리고, 그 이후 바뀐 원격 행을 받아
-/// id 별로 updatedAt 이 늦은 쪽을 남긴다 ([LibraryStore.mergeRemote]).
-/// 마지막 동기화 시각은 [stateFile] 에 `{ "lastSyncAt": ISO 8601 UTC }` 로 둔다.
+/// 원격 행을 모두 받아 id 별로 updatedAt 이 늦은 쪽을 남기고([LibraryStore.mergeRemote]),
+/// 그다음 원격에 없거나 원격보다 늦게 고친 기기 행만 올린다. 형식을 읽지 못한 원격 행은
+/// 건너뛰고, 그 id 의 기기 행으로 덮어쓰지 않는다.
+/// 마지막 동기화 시각은 [stateFile] 에 `{ "lastSyncAt": ISO 8601 UTC }` 로 둔다 (표시용).
 class SyncService extends ChangeNotifier {
   SyncService({
     required this.library,
@@ -58,45 +59,33 @@ class SyncService extends ChangeNotifier {
     _syncing = true;
     notifyListeners();
     try {
-      final since = _lastSyncAt;
       final startedAt = _clock().toUtc();
-      bool changedSince(DateTime updatedAt) =>
-          since == null || updatedAt.isAfter(since);
-      final recipes = library.allRecipes
-          .where((r) => changedSince(r.updatedAt))
-          .toList();
-      final loadouts = library.allLoadouts
-          .where((l) => changedSince(l.updatedAt))
-          .toList();
-      await remote.upsert(recipes: recipes, loadouts: loadouts);
-
-      final changes = await remote.fetchSince(since);
-      var skipped = 0;
-      List<T> parse<T>(List<Object?> rows, T Function(Object?) fromJson) {
-        final parsed = <T>[];
-        for (final row in rows) {
-          try {
-            parsed.add(fromJson(row));
-          } on FormatException {
-            skipped++;
-          }
-        }
-        return parsed;
-      }
-
+      final changes = await remote.fetchAll();
+      final recipes = _parse(changes.recipes, Recipe.fromJson, (r) => r.id);
+      final loadouts = _parse(changes.loadouts, Loadout.fromJson, (l) => l.id);
       final merged = await library.mergeRemote(
-        recipes: parse(changes.recipes, Recipe.fromJson),
-        loadouts: parse(changes.loadouts, Loadout.fromJson),
+        recipes: recipes.rows,
+        loadouts: loadouts.rows,
       );
+
+      final upRecipes = [
+        for (final r in library.allRecipes)
+          if (recipes.isNewerLocally(r.id, r.updatedAt)) r,
+      ];
+      final upLoadouts = [
+        for (final l in library.allLoadouts)
+          if (loadouts.isNewerLocally(l.id, l.updatedAt)) l,
+      ];
+      await remote.upsert(recipes: upRecipes, loadouts: upLoadouts);
 
       _lastSyncAt = startedAt;
       await writeJsonAtomically(stateFile, {
         'lastSyncAt': startedAt.toIso8601String(),
       });
       log.add(
-        '동기화: 올림 ${recipes.length + loadouts.length}, '
-        '받음 ${changes.recipes.length + changes.loadouts.length}, '
-        '바뀜 $merged, 건너뜀 $skipped',
+        '동기화: 받음 ${changes.recipes.length + changes.loadouts.length}, '
+        '바뀜 $merged, 올림 ${upRecipes.length + upLoadouts.length}, '
+        '건너뜀 ${recipes.skipped + loadouts.skipped}',
       );
       return true;
     } on Exception catch (e) {
@@ -106,5 +95,47 @@ class SyncService extends ChangeNotifier {
       _syncing = false;
       notifyListeners();
     }
+  }
+
+  static _Parsed<T> _parse<T>(
+    List<Object?> bodies,
+    T Function(Object?) fromJson,
+    String Function(T) idOf,
+  ) {
+    final parsed = _Parsed<T>();
+    for (final body in bodies) {
+      try {
+        final row = fromJson(body);
+        parsed.rows.add(row);
+        parsed.remoteUpdatedAt[idOf(row)] = switch (body) {
+          {'updatedAt': final String text} => parseUtc(text),
+          _ => null,
+        };
+      } on FormatException {
+        parsed.skipped++;
+        if (body case {'id': final String id}) parsed.unreadable.add(id);
+      }
+    }
+    return parsed;
+  }
+}
+
+/// 원격 행을 읽은 결과.
+class _Parsed<T> {
+  final rows = <T>[];
+
+  /// 읽은 원격 행의 id → updatedAt.
+  final remoteUpdatedAt = <String, DateTime?>{};
+
+  /// 형식을 읽지 못한 원격 행의 id. 기기 행으로 덮어쓰지 않는다.
+  final unreadable = <String>{};
+  var skipped = 0;
+
+  /// 기기 행을 올려야 하는지: 원격에 없거나, 원격보다 늦게 고쳤을 때.
+  bool isNewerLocally(String id, DateTime localUpdatedAt) {
+    if (unreadable.contains(id)) return false;
+    if (!remoteUpdatedAt.containsKey(id)) return true;
+    final remote = remoteUpdatedAt[id];
+    return remote == null || localUpdatedAt.isAfter(remote);
   }
 }
