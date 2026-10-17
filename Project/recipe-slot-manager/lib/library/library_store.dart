@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:recipe_slot_manager/library/loadout.dart';
 import 'package:recipe_slot_manager/recipe/recipe.dart';
 import 'package:recipe_slot_manager/util/atomic_json.dart';
+import 'package:recipe_slot_manager/util/serial_queue.dart';
 
 /// 레시피와 묶음을 기기의 JSON 파일(`recipes.json`, `loadouts.json`)에 저장한다.
 ///
@@ -18,6 +19,10 @@ class LibraryStore extends ChangeNotifier {
   final DateTime Function() _clock;
   final _recipes = <String, Recipe>{};
   final _loadouts = <String, Loadout>{};
+
+  /// 파일 쓰기를 하나씩 한다. 저장이 겹치면 늦게 시작한 쓰기가 먼저 끝나 앞의 내용으로
+  /// 덮일 수 있으므로, 쓰는 시점의 최신 상태를 순서대로 쓴다.
+  final _writes = SerialQueue();
 
   File get _recipeFile => File(p.join(directory.path, 'recipes.json'));
   File get _loadoutFile => File(p.join(directory.path, 'loadouts.json'));
@@ -115,22 +120,26 @@ class LibraryStore extends ChangeNotifier {
       }
     }
     if (changed > 0) {
-      await writeJsonAtomically(_recipeFile, _recipeJson());
-      await writeJsonAtomically(_loadoutFile, _loadoutJson());
+      await _writeFile(_recipeFile, _recipeJson);
+      await _writeFile(_loadoutFile, _loadoutJson);
       notifyListeners();
     }
     return changed;
   }
 
   Future<void> _writeRecipes() async {
-    await writeJsonAtomically(_recipeFile, _recipeJson());
+    await _writeFile(_recipeFile, _recipeJson);
     notifyListeners();
   }
 
   Future<void> _writeLoadouts() async {
-    await writeJsonAtomically(_loadoutFile, _loadoutJson());
+    await _writeFile(_loadoutFile, _loadoutJson);
     notifyListeners();
   }
+
+  /// [json] 은 쓰기 차례가 왔을 때 만든다.
+  Future<void> _writeFile(File file, Map<String, Object> Function() json) =>
+      _writes.run(() => writeJsonAtomically(file, json()));
 
   Map<String, Object> _recipeJson() => {
     'recipes': [for (final r in _recipes.values) r.toJson()],
