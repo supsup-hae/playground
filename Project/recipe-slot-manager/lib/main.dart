@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:recipe_slot_manager/camera/fuji_camera.dart';
 import 'package:recipe_slot_manager/camera/macos_ptp_transport.dart';
 import 'package:recipe_slot_manager/camera/slot_backup_store.dart';
+import 'package:recipe_slot_manager/design/app_theme.dart';
 import 'package:recipe_slot_manager/ui/slots_page.dart';
 
 Future<void> main() async {
@@ -19,7 +20,7 @@ Future<void> main() async {
   runApp(
     MaterialApp(
       title: 'Recipe Slot Manager',
-      theme: ThemeData(colorSchemeSeed: Colors.teal),
+      theme: buildAppTheme(),
       home: SlotsPage(camera: camera, backupStore: backupStore),
     ),
   );
