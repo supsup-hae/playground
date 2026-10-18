@@ -20,9 +20,18 @@ class _DesignGalleryPageState extends State<DesignGalleryPage> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    final ratio = MediaQuery.devicePixelRatioOf(context);
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.xl),
       children: [
+        // 기기마다 실제 논리 크기를 확인하려고 둔다 (좁은 화면 기준 크기를 정할 때 쓴다).
+        Text(
+          '화면 ${size.width.toStringAsFixed(0)} × '
+          '${size.height.toStringAsFixed(0)} dp, 배율 ${ratio.toStringAsFixed(1)}',
+          style: AppType.label,
+        ),
+        const SizedBox(height: AppSpacing.lg),
         _section('색', [
           Wrap(
             spacing: AppSpacing.sm,

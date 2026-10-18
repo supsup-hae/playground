@@ -28,8 +28,10 @@ class FujiCamera {
   /// 지금 작업에서 슬롯을 선택했는지. 끝날 때 원래 슬롯으로 되돌릴지 정한다.
   var _slotChanged = false;
 
+  /// 새 세션을 연다. PTP 규칙대로 세션마다 transaction ID 를 1 부터 다시 센다.
   Future<String> connect() async {
     final model = await _transport.connect();
+    _transactionId = 0;
     log.add('$model 연결');
     return model;
   }

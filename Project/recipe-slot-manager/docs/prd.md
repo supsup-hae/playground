@@ -41,7 +41,7 @@ We'll know we're right when 7슬롯 전체 덮어쓰기가 10초 안에 끝나�
 - [ ] X-T5의 속성 코드·값 인코딩이 FilmKit(X100VI 기준)과 같은가 - 1단계에서 실기기로 확인
 - [ ] 슬롯 1개 쓰기에 PTP 왕복이 몇 번, 몇 ms 걸리는가 - 10초 목표 달성 여부를 결정한다. 바뀐 값만 쓰면 왕복 수가 줄어든다
 - [ ] 슬롯 선택 `0xD18C`이 카메라의 현재 촬영 설정까지 바꾸는가
-- [ ] Android에서 USB PTP 연결 시 권한·전원 조건 (USB OTG, 카메라 연결 모드)
+- [ ] Android에서 USB PTP 연결 시 권한·전원 조건 (USB OTG, 카메라 연결 모드) - 3단계에서 권한 요청, 꽂힘 시 앱 열기, 인터페이스 강제 점유를 구현. 휴대폰 전원으로 카메라가 연결 모드에 들어가는지와 삼성 기본 앱이 카메라를 먼저 잡는지는 실기기 미확인
 - [ ] 블루투스로 슬롯을 쓰는 방법 - 공개 자료가 없다. 7단계 조사 결과에 따라 범위가 정해진다
 - [ ] 후지 JPEG EXIF(MakerNote)에 레시피 값이 어디까지 기록되는가 (DR, 클래리티, WB 시프트 등)
 - [ ] 다이내믹 레인지(ISO 의존), 클래리티(드라이브 모드 의존)를 카메라가 거부할 때의 처리 방식
@@ -130,7 +130,7 @@ When 장소를 옮기거나 특정 장면을 만나면, I want to 그 상황에 
 |---|-------|-------------|--------|----------|---------|----------|
 | 1 | 카메라 연결 기반 (macOS) | X-T5 USB 연결, C1–C7 읽기·쓰기·검증, 백업·복원, 왕복 시간 측정 | complete (실기기 미확인) | - | - | [plans/phase-1-camera-link.plan.md](plans/phase-1-camera-link.plan.md) |
 | 2 | 보관함·묶음·비교 | 디자인 시스템, Supabase 로그인·저장·동기화, 레시피 편집, 상황별 묶음, 비교 화면, 일괄 덮어쓰기 | complete (Supabase 연결·실기기 미확인) | - | 1 | [plans/phase-2-library.plan.md](plans/phase-2-library.plan.md) |
-| 3 | Android | 같은 기능을 Android에서 USB로 | pending | - | 2 | - |
+| 3 | Android | 같은 기능을 Android에서 USB로 | in-progress | - | 2 | [plans/phase-3-android.plan.md](plans/phase-3-android.plan.md) |
 | 4 | 가져오기 | 카메라 슬롯 가져오기, JPEG EXIF 추출, OCR | pending | with 5 | 2 | - |
 | 5 | RAW 미리보기 | RAF 업로드 → 카메라 내부 현상 → 좌우 비교 | pending | with 4 | 2 | - |
 | 6 | 블루투스 조사 | 본인 카메라와 공식 앱의 BLE 통신 관찰, 슬롯 쓰기 가능 여부 판단 | pending | with 2–5 | 1 | - |
@@ -193,6 +193,8 @@ When 장소를 옮기거나 특정 장면을 만나면, I want to 그 상황에 
 | 카메라 연결 | USB PTP 먼저, BLE는 조사 후 | BLE 먼저 | USB는 공개 자료가 있고, BLE는 없다 |
 | 쓰기 방식 | 바뀐 값만 쓰기 + 다시 읽어 검증 | 전체 값 쓰기 | 10초 목표, 비교 화면과 같은 diff 사용 |
 | 범위 | 커뮤니티·동영상 제외 | 포함 | 본인용 앱 |
+| Android USB 처리 위치 | Kotlin 은 bulk 바이트만 옮기고 PTP 컨테이너는 Dart 가 조립·해석 | Kotlin 에서 PTP 처리, 범용 USB 플러그인 | 실기기 없이 가짜 채널로 PTP 처리 전부를 시험할 수 있다 (2026-10-17) |
+| 휴대폰 화면 | 폭 600 미만 또는 높이 500 미만이면 아래 탭·접힌 로그, 임시 틀 | 휴대폰 전용 디자인 | 디자인 시스템 개편 때 다시 짠다. 기준 기기 갤럭시 S26 울트라 (2026-10-17) |
 
 ---
 

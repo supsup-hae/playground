@@ -23,6 +23,9 @@ class FakePtpTransport implements PtpTransport {
   /// 보낸 명령 기록: (명령 코드, 매개변수).
   final sent = <(int, List<int>)>[];
 
+  /// 보낸 명령의 transaction ID, 보낸 순서대로.
+  final transactionIds = <int>[];
+
   Iterable<(int, List<int>)> get propWrites => sent.where(
     (c) =>
         c.$1 == PtpOp.setDevicePropValue && c.$2.first != FujiProp.presetSlot,
@@ -43,6 +46,7 @@ class FakePtpTransport implements PtpTransport {
         view.getUint32(offset, Endian.little),
     ];
     sent.add((op, params));
+    transactionIds.add(view.getUint32(8, Endian.little));
     final prop = params.first;
 
     if (op == PtpOp.getDevicePropValue) {

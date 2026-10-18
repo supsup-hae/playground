@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:recipe_slot_manager/camera/android_ptp_transport.dart';
 import 'package:recipe_slot_manager/camera/camera_session.dart';
 import 'package:recipe_slot_manager/camera/fuji_camera.dart';
 import 'package:recipe_slot_manager/camera/macos_ptp_transport.dart';
@@ -21,7 +22,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final support = await getApplicationSupportDirectory();
   final session = CameraSession(
-    FujiCamera(MacosPtpTransport()),
+    FujiCamera(
+      Platform.isAndroid ? AndroidPtpTransport() : MacosPtpTransport(),
+    ),
     SlotBackupStore(Directory(p.join(support.path, 'backups'))),
   );
   final library = LibraryStore(Directory(p.join(support.path, 'library')));

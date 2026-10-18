@@ -65,4 +65,43 @@ void main() {
       expect(() => ptpResponseCode(dataContainer), throwsFormatException);
     });
   });
+
+  group('ptpDataContainer', () {
+    test('명령의 코드와 transaction ID 로 데이터 컨테이너를 만든다', () {
+      final command = ptpCommand(
+        PtpOp.setDevicePropValue,
+        transactionId: 7,
+        params: [FujiProp.presetSlot],
+      );
+
+      final bytes = ptpDataContainer(command, Uint8List.fromList([0x03, 0x00]));
+
+      expect(bytes, [
+        0x0E, 0x00, 0x00, 0x00, // 길이 14
+        0x02, 0x00, // 데이터
+        0x16, 0x10, // 0x1016
+        0x07, 0x00, 0x00, 0x00, // txId 7
+        0x03, 0x00,
+      ]);
+    });
+  });
+
+  group('ptpContainerHeader', () {
+    test('길이, 타입, 코드를 읽는다', () {
+      final header = ptpContainerHeader(
+        Uint8List.fromList([
+          0x0E, 0x00, 0x00, 0x00, 0x02, 0x00, 0x15, 0x10, //
+          0x01, 0x00, 0x00, 0x00, 0x11, 0x00,
+        ]),
+      );
+
+      expect(header.length, 14);
+      expect(header.type, ptpDataType);
+      expect(header.code, PtpOp.getDevicePropValue);
+    });
+
+    test('12바이트보다 짧으면 FormatException 을 던진다', () {
+      expect(() => ptpContainerHeader(Uint8List(11)), throwsFormatException);
+    });
+  });
 }
