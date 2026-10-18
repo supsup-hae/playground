@@ -33,6 +33,13 @@ abstract final class AppSpacing {
   static const xxl = 32.0;
 }
 
+/// 휴대폰 배치로 바꾸는 기준. 폭이 [compactWidth] 보다 좁거나 높이가 [compactHeight] 보다 낮으면
+/// 아래 탭, 접힌 로그, 위아래로 쌓는 비교를 쓴다.
+abstract final class AppBreakpoints {
+  static const compactWidth = 600.0;
+  static const compactHeight = 500.0;
+}
+
 abstract final class AppRadius {
   static const sm = 4.0;
   static const md = 8.0;

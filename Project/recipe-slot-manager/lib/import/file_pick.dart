@@ -43,3 +43,20 @@ Future<PickedFile?> pickImage() async {
     bytes: await file.readAsBytes(),
   );
 }
+
+const _raf = XTypeGroup(
+  label: 'RAF',
+  extensions: ['raf'],
+  mimeTypes: ['image/x-fuji-raf', 'application/octet-stream'],
+  uniformTypeIdentifiers: ['com.fuji.raw-image'],
+);
+
+/// 후지 RAW(RAF) 하나를 골라 전부 읽는다.
+Future<PickedFile?> pickRaf() async {
+  final file = await openFile(acceptedTypeGroups: [_raf]);
+  if (file == null) return null;
+  return (
+    name: p.basenameWithoutExtension(file.name),
+    bytes: await file.readAsBytes(),
+  );
+}
