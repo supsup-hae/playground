@@ -32,7 +32,7 @@ void main() {
 
         expect(find.byType(NavigationBar), findsOneWidget);
         expect(find.byType(NavigationRail), findsNothing);
-        for (final label in ['묶음', '원시 값', '디자인', '레시피']) {
+        for (final label in ['묶음', '카메라 슬롯', '디자인', '레시피']) {
           await tester.tap(find.text(label).last);
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull, reason: label);
@@ -45,7 +45,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull, reason: '디자인 끝까지');
 
-        await tester.tap(find.text('원시 값').last);
+        await tester.tap(find.text('카메라 슬롯').last);
         await tester.pumpAndSettle();
         await TestApp.tapAndWait(tester, find.text('7슬롯 읽기'));
         expect(tester.takeException(), isNull, reason: '7슬롯 표');

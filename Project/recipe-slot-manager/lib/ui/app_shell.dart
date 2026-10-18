@@ -12,7 +12,7 @@ import 'package:recipe_slot_manager/ui/slots_page.dart';
 const _destinations = [
   (Icons.tune, '레시피'),
   (Icons.view_week_outlined, '묶음'),
-  (Icons.table_chart_outlined, '원시 값'),
+  (Icons.table_chart_outlined, '카메라 슬롯'),
   (Icons.palette_outlined, '디자인'),
 ];
 
