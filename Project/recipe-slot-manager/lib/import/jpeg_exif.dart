@@ -59,8 +59,10 @@ Uint8List readMakerNote(Uint8List jpeg) {
   while (at + 4 <= jpeg.length && jpeg[at] == 0xFF) {
     final marker = jpeg[at + 1];
     if (marker == 0xDA || marker == 0xD9) break;
-    final end = at + 2 + (jpeg[at + 2] << 8 | jpeg[at + 3]);
-    if (end > jpeg.length) throw _broken;
+    // 세그먼트 길이는 길이 필드 2바이트를 포함하므로 2 이상이다.
+    final length = jpeg[at + 2] << 8 | jpeg[at + 3];
+    final end = at + 2 + length;
+    if (length < 2 || end > jpeg.length) throw _broken;
     final body = Uint8List.sublistView(jpeg, at + 4, end);
     if (marker == 0xE1 && _isExif(body)) {
       return _makerNoteIn(Uint8List.sublistView(body, 6));

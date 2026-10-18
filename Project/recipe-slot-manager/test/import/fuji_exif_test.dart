@@ -58,6 +58,26 @@ void main() {
       expect(() => readMakerNote(jpeg), throwsA(isA<ImportException>()));
     });
 
+    test('세그먼트 길이가 2보다 작으면 깨진 파일로 본다', () {
+      for (final length in [0, 1]) {
+        final jpeg = Uint8List.fromList([
+          0xFF,
+          0xD8,
+          0xFF,
+          0xE1,
+          0x00,
+          length,
+          0xFF,
+          0xD9,
+        ]);
+        expect(
+          () => readMakerNote(jpeg),
+          throwsA(isA<ImportException>()),
+          reason: '길이 $length',
+        );
+      }
+    });
+
     test('잘린 파일은 ImportException', () {
       final jpeg = jpegWithExif(makerNote: fujiMakerNote(colorTags));
       expect(

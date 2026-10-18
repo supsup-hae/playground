@@ -2,6 +2,7 @@ package dev.supsuphae.recipe_slot_manager
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.media.ExifInterface
 import android.os.Handler
 import android.os.Looper
 import com.google.mlkit.vision.common.InputImage
@@ -9,6 +10,7 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import java.io.ByteArrayInputStream
 import java.util.concurrent.Executors
 
 /**
@@ -38,7 +40,7 @@ class OcrChannel : MethodChannel.MethodCallHandler {
                 main.post { result.error("image", "이미지를 열지 못했다", null) }
                 return@execute
             }
-            recognizer.process(InputImage.fromBitmap(bitmap, 0))
+            recognizer.process(InputImage.fromBitmap(bitmap, rotationOf(bytes)))
                 .addOnSuccessListener { text ->
                     result.success(text.textBlocks.flatMap { block -> block.lines.map { it.text } })
                 }
@@ -55,6 +57,23 @@ class OcrChannel : MethodChannel.MethodCallHandler {
         val options = BitmapFactory.Options().apply { inSampleSize = sample }
         return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
     }
+
+    /**
+     * JPEG EXIF 방향을 시계 방향 회전 각도로 바꾼다. 세로로 찍은 사진은 옆으로 누운 채
+     * 저장되므로, 이 각도를 알려 줘야 ML Kit 이 글자를 바로 세워 읽는다. EXIF 가 없으면 0.
+     */
+    private fun rotationOf(bytes: ByteArray): Int =
+        when (
+            runCatching {
+                ExifInterface(ByteArrayInputStream(bytes))
+                    .getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+            }.getOrDefault(ExifInterface.ORIENTATION_NORMAL)
+        ) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> 90
+            ExifInterface.ORIENTATION_ROTATE_180 -> 180
+            ExifInterface.ORIENTATION_ROTATE_270 -> 270
+            else -> 0
+        }
 
     /** 액티비티가 끝날 때 부른다. */
     fun dispose() {
