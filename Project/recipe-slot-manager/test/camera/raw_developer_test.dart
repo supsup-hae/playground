@@ -94,6 +94,7 @@ void main() {
         PtpOp.getObjectHandles,
         PtpOp.setDevicePropValue,
         PtpOp.getObjectHandles,
+        PtpOp.getObjectInfo,
         PtpOp.getObject,
         PtpOp.deleteObject,
       ]);
@@ -114,6 +115,29 @@ void main() {
       expect(jpeg[2], isNot(0x01), reason: '카드 사진이 아니라 현상 결과');
       expect(transport.fetchedHandles, [FakePtpTransport.resultHandle]);
       expect(transport.deletedHandles, [FakePtpTransport.resultHandle]);
+    });
+
+    test('새로 생긴 객체라도 JPEG 이 아니면 결과로 받지 않는다', () async {
+      transport.newObjects[0x30] = FujiOp.rafFormat;
+      await developer.loadRaf(raf);
+
+      await developer.develop({'highlight': 1});
+
+      expect(transport.fetchedHandles, [FakePtpTransport.resultHandle]);
+      expect(transport.deletedHandles, [FakePtpTransport.resultHandle]);
+    });
+
+    test('결과를 받은 뒤 지우기가 실패해도 결과를 돌려주고 로그에 남긴다', () async {
+      await developer.loadRaf(raf);
+      transport.throwOps.add(PtpOp.deleteObject);
+
+      final jpeg = await developer.develop({'highlight': 1});
+
+      expect(jpeg.sublist(0, 2), [0xFF, 0xD8]);
+      expect(
+        developer.camera.log.entries.map((e) => e.$2),
+        contains(startsWith('현상 결과를 카메라에서 지우지 못했다')),
+      );
     });
 
     test('앞 현상이 늦게 남긴 결과는 다음 현상의 결과로 쓰지 않는다', () async {

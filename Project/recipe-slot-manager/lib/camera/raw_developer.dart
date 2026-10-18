@@ -118,8 +118,12 @@ class RawDeveloper {
         timeout: transferTimeout,
       ),
     );
-    // 카메라에 남은 임시 결과를 지운다. 실패해도 결과는 이미 받았다.
-    await camera.command(PtpOp.deleteObject, params: [handle]);
+    // 카메라에 남은 임시 결과를 지운다. 실패해도 결과는 이미 받았으므로 로그만 남긴다.
+    try {
+      await camera.command(PtpOp.deleteObject, params: [handle]);
+    } on PtpTransportException catch (e) {
+      camera.log.add('현상 결과를 카메라에서 지우지 못했다: ${e.message}');
+    }
     final jpeg = result.data;
     if (jpeg.length < 2 || jpeg[0] != 0xFF || jpeg[1] != 0xD8) {
       throw const RawDevelopException('현상 결과가 JPEG 이 아니다');
@@ -128,12 +132,15 @@ class RawDeveloper {
     return jpeg;
   }
 
-  /// [before] 에 없던 객체가 생길 때까지 [pollInterval] 마다 객체 목록을 본다.
+  /// [before] 에 없던 JPEG 객체가 생길 때까지 [pollInterval] 마다 객체 목록을 본다.
+  /// 새로 생겼어도 JPEG 이 아닌 객체는 결과로 보지 않는다.
   Future<int> _waitForResult(Set<int> before) async {
+    final seen = {...before};
     final watch = Stopwatch()..start();
     while (true) {
-      final fresh = (await _handlesNow()).where((h) => !before.contains(h));
-      if (fresh.isNotEmpty) return fresh.first;
+      for (final handle in await _handlesNow()) {
+        if (seen.add(handle) && await _isJpeg(handle)) return handle;
+      }
       if (watch.elapsed >= pollTimeout) {
         throw RawDevelopException(
           '현상 결과가 ${pollTimeout.inSeconds}초 안에 나오지 않았다',
@@ -141,6 +148,14 @@ class RawDeveloper {
       }
       await Future<void>.delayed(pollInterval);
     }
+  }
+
+  Future<bool> _isJpeg(int handle) async {
+    final info = await camera.command(PtpOp.getObjectInfo, params: [handle]);
+    return info.isOk &&
+        info.data.length >= 6 &&
+        ByteData.sublistView(info.data).getUint16(4, Endian.little) ==
+            PtpObjectFormat.jpeg;
   }
 
   Future<List<int>> _handlesNow() async {

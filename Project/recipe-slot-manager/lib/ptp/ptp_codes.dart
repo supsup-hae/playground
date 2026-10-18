@@ -4,10 +4,16 @@ abstract final class PtpOp {
   static const openSession = 0x1002;
   static const closeSession = 0x1003;
   static const getObjectHandles = 0x1007;
+  static const getObjectInfo = 0x1008;
   static const getObject = 0x1009;
   static const deleteObject = 0x100B;
   static const getDevicePropValue = 0x1015;
   static const setDevicePropValue = 0x1016;
+}
+
+/// PTP ObjectFormat (ISO 15740). ObjectInfo 의 4–5 바이트.
+abstract final class PtpObjectFormat {
+  static const jpeg = 0x3801;
 }
 
 /// 후지필름 전용 명령 코드. RAF 를 카메라로 보낼 때 쓴다 (FilmKit `src/ptp/constants.ts`).

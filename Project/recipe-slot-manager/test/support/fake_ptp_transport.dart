@@ -57,12 +57,19 @@ class FakePtpTransport implements PtpTransport {
   /// 현상과 상관없이 카메라에 이미 있는 객체(메모리 카드 사진). 받거나 지우면 안 된다.
   final existingHandles = <int>[];
 
+  /// 현상을 시작한 뒤 결과와 함께 나타나는 다른 객체: 핸들 → ObjectFormat.
+  final newObjects = <int, int>{};
+
+  /// 이 명령들은 카메라에 닿지 못한 것처럼 예외를 던진다.
+  final throwOps = <int>{};
+
   /// 받은 객체 핸들, 받은 순서대로.
   final fetchedHandles = <int>[];
   final deletedHandles = <int>[];
   Uint8List? _result;
   var _resultHandle = resultHandle - 1;
   var _pollsLeft = 0;
+  var _started = false;
 
   Iterable<(int, List<int>)> get propWrites => sent.where(
     (c) =>
@@ -91,6 +98,9 @@ class FakePtpTransport implements PtpTransport {
     sent.add((op, params));
     transactionIds.add(view.getUint32(8, Endian.little));
     if (rejectOps[op] case final code?) return _reply(code);
+    if (throwOps.contains(op)) {
+      throw const PtpTransportException('USB 응답 시간 초과');
+    }
     if (_raw(op, params, data) case final reply?) return reply;
     final prop = params.first;
 
@@ -138,8 +148,16 @@ class FakePtpTransport implements PtpTransport {
         return _reply(PtpResponse.ok);
       case PtpOp.getObjectHandles:
         final ready = _result != null && _pollsLeft-- <= 0;
-        final handles = [...existingHandles, if (ready) _resultHandle];
+        final handles = [
+          ...existingHandles,
+          if (_started) ...newObjects.keys,
+          if (ready) _resultHandle,
+        ];
         return _reply(PtpResponse.ok, _u32s([handles.length, ...handles]));
+      case PtpOp.getObjectInfo:
+        final format = newObjects[prop] ?? 0x3801;
+        final info = ByteData(52)..setUint16(4, format, Endian.little);
+        return _reply(PtpResponse.ok, info.buffer.asUint8List());
       case PtpOp.getObject:
         fetchedHandles.add(prop!);
         if (existingHandles.contains(prop)) {
@@ -162,6 +180,7 @@ class FakePtpTransport implements PtpTransport {
         _result = developResult(writtenProfiles.last);
         _resultHandle++;
         _pollsLeft = conversionPolls;
+        _started = true;
         return _reply(PtpResponse.ok);
     }
     return null;
