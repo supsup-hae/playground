@@ -51,13 +51,25 @@ class PtpChannel(private val context: Context) : MethodChannel.MethodCallHandler
     /** 작업 스레드에서만 읽고 쓴다. */
     private var link: Link? = null
 
-    init {
-        // 케이블이 빠지면 연결을 정리한다. 다음 명령은 disconnected 로 끝난다.
-        register(object : BroadcastReceiver() {
-            override fun onReceive(context: Context, intent: Intent) {
-                worker.execute { close() }
+    /** 지금 연결한 카메라가 빠지면 연결을 정리한다. 다음 명령은 disconnected 로 끝난다. */
+    private val detachReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val detached = detachedDevice(intent) ?: return
+            worker.execute {
+                if (detached.deviceName == link?.device?.deviceName) close()
             }
-        }, IntentFilter(UsbManager.ACTION_USB_DEVICE_DETACHED))
+        }
+    }
+
+    init {
+        register(detachReceiver, IntentFilter(UsbManager.ACTION_USB_DEVICE_DETACHED))
+    }
+
+    /** 액티비티가 끝날 때 부른다. 리시버를 풀고, 연결을 닫고, 작업 스레드를 끝낸다. */
+    fun dispose() {
+        context.unregisterReceiver(detachReceiver)
+        worker.execute { close() }
+        worker.shutdown()
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
@@ -161,7 +173,8 @@ class PtpChannel(private val context: Context) : MethodChannel.MethodCallHandler
             val sent = current.connection.bulkTransfer(
                 current.bulkOut, bytes, offset, bytes.size - offset, TRANSFER_TIMEOUT_MS,
             )
-            if (sent < 0) throw PtpError("timeout", "USB 쓰기 시간 초과")
+            // 0 이면 offset 이 늘지 않아 같은 바이트를 끝없이 보내게 된다.
+            if (sent <= 0) throw PtpError("timeout", "USB 쓰기 시간 초과")
             offset += sent
         }
         // 길이가 패킷 크기의 배수면 0바이트 패킷으로 전송 끝을 알린다.
@@ -202,6 +215,14 @@ class PtpChannel(private val context: Context) : MethodChannel.MethodCallHandler
             }
         }
     }
+
+    private fun detachedDevice(intent: Intent): UsbDevice? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableExtra(UsbManager.EXTRA_DEVICE, UsbDevice::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
+        }
 
     private fun register(receiver: BroadcastReceiver, filter: IntentFilter) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
