@@ -55,7 +55,7 @@ class _AppShellState extends State<AppShell> {
         size.width < AppShell.compactWidth ||
         size.height < AppShell.compactHeight;
     final page = switch (_index) {
-      0 => RecipeListPage(library: widget.library),
+      0 => RecipeListPage(library: widget.library, session: widget.session),
       1 => LoadoutListPage(library: widget.library, session: widget.session),
       2 => SlotsPage(session: widget.session),
       _ => const DesignGalleryPage(),

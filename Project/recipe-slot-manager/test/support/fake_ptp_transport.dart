@@ -26,6 +26,9 @@ class FakePtpTransport implements PtpTransport {
   /// 보낸 명령의 transaction ID, 보낸 순서대로.
   final transactionIds = <int>[];
 
+  /// 있으면 명령을 보낼 때 이 예외를 던진다 (카메라에 닿지 못한 경우).
+  PtpTransportException? failure;
+
   Iterable<(int, List<int>)> get propWrites => sent.where(
     (c) =>
         c.$1 == PtpOp.setDevicePropValue && c.$2.first != FujiProp.presetSlot,
@@ -39,6 +42,7 @@ class FakePtpTransport implements PtpTransport {
 
   @override
   Future<PtpReply> send(Uint8List command, {Uint8List? data}) async {
+    if (failure case final error?) throw error;
     final view = ByteData.sublistView(command);
     final op = view.getUint16(6, Endian.little);
     final params = [

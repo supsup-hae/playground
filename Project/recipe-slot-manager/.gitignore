@@ -49,3 +49,6 @@ app.*.map.json
 
 # Supabase 접속 정보 (supabase.example.json 참고)
 supabase.json
+
+# 사용자 표본 사진 (EXIF 확인용, 개인정보 포함)
+samples/
