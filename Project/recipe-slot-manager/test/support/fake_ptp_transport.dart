@@ -41,7 +41,11 @@ class FakePtpTransport implements PtpTransport {
   Future<void> disconnect() async {}
 
   @override
-  Future<PtpReply> send(Uint8List command, {Uint8List? data}) async {
+  Future<PtpReply> send(
+    Uint8List command, {
+    Uint8List? data,
+    Duration? timeout,
+  }) async {
     if (failure case final error?) throw error;
     final view = ByteData.sublistView(command);
     final op = view.getUint16(6, Endian.little);

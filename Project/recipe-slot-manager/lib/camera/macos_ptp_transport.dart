@@ -12,21 +12,25 @@ class MacosPtpTransport implements PtpTransport {
   );
 
   @override
-  Future<PtpReply> send(Uint8List command, {Uint8List? data}) =>
-      guardPtpChannel(() async {
-        final reply = await ptpChannel.invokeMapMethod<String, Object?>(
-          'send',
-          {'command': command, 'data': data},
-        );
-        if (reply case {'response': final Uint8List response}) {
-          final data = reply['data'];
-          return PtpReply(
-            ptpResponseCode(response),
-            data is Uint8List ? data : Uint8List(0),
-          );
-        }
-        throw const PtpTransportException('PTP 응답이 비어 있다');
-      });
+  Future<PtpReply> send(
+    Uint8List command, {
+    Uint8List? data,
+    Duration? timeout,
+  }) => guardPtpChannel(() async {
+    final reply = await ptpChannel.invokeMapMethod<String, Object?>('send', {
+      'command': command,
+      'data': data,
+      if (timeout != null) 'timeout': timeout.inMilliseconds / 1000,
+    });
+    if (reply case {'response': final Uint8List response}) {
+      final data = reply['data'];
+      return PtpReply(
+        ptpResponseCode(response),
+        data is Uint8List ? data : Uint8List(0),
+      );
+    }
+    throw const PtpTransportException('PTP 응답이 비어 있다');
+  });
 
   @override
   Future<void> disconnect() =>

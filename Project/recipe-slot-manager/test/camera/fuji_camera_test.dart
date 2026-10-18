@@ -298,7 +298,11 @@ class _FlakyTransport implements PtpTransport {
   Future<void> disconnect() => _inner.disconnect();
 
   @override
-  Future<PtpReply> send(Uint8List command, {Uint8List? data}) {
+  Future<PtpReply> send(
+    Uint8List command, {
+    Uint8List? data,
+    Duration? timeout,
+  }) {
     if (++_count > failAfter) throw const PtpTransportException('케이블 분리');
     return _inner.send(command, data: data);
   }
@@ -312,6 +316,9 @@ class _FailingTransport implements PtpTransport {
   Future<void> disconnect() async {}
 
   @override
-  Future<PtpReply> send(Uint8List command, {Uint8List? data}) =>
-      throw const PtpTransportException('케이블 분리');
+  Future<PtpReply> send(
+    Uint8List command, {
+    Uint8List? data,
+    Duration? timeout,
+  }) => throw const PtpTransportException('케이블 분리');
 }

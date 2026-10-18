@@ -50,6 +50,38 @@ void main() {
     expect(calls.single.arguments, {'command': command, 'data': value});
   });
 
+  test('시간 제한을 주면 채널 인자에 초 단위로 싣는다', () async {
+    handler = (_) async => {
+      'response': Uint8List.fromList([
+        12,
+        0,
+        0,
+        0,
+        3,
+        0,
+        0x01,
+        0x20,
+        1,
+        0,
+        0,
+        0,
+      ]),
+      'data': Uint8List(0),
+    };
+    final command = Uint8List.fromList([1, 2, 3]);
+
+    await MacosPtpTransport().send(
+      command,
+      timeout: const Duration(seconds: 60),
+    );
+
+    expect(calls.single.arguments, {
+      'command': command,
+      'data': null,
+      'timeout': 60.0,
+    });
+  });
+
   test('플랫폼 오류는 PtpTransportException 으로 바꾼다', () async {
     handler = (_) async =>
         throw PlatformException(code: 'timeout', message: 'PTP 응답 시간 초과');
