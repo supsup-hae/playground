@@ -6,6 +6,7 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private var ptpChannel: PtpChannel? = null
+    private var ocrChannel: OcrChannel? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -13,11 +14,17 @@ class MainActivity : FlutterActivity() {
         ptpChannel = channel
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, PtpChannel.CHANNEL)
             .setMethodCallHandler(channel)
+        val ocr = OcrChannel()
+        ocrChannel = ocr
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, OcrChannel.CHANNEL)
+            .setMethodCallHandler(ocr)
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
         ptpChannel?.dispose()
         ptpChannel = null
+        ocrChannel?.dispose()
+        ocrChannel = null
         super.cleanUpFlutterEngine(flutterEngine)
     }
 }
