@@ -3,8 +3,26 @@ abstract final class PtpOp {
   static const getDeviceInfo = 0x1001;
   static const openSession = 0x1002;
   static const closeSession = 0x1003;
+  static const getObjectHandles = 0x1007;
+  static const getObjectInfo = 0x1008;
+  static const getObject = 0x1009;
+  static const deleteObject = 0x100B;
   static const getDevicePropValue = 0x1015;
   static const setDevicePropValue = 0x1016;
+}
+
+/// PTP ObjectFormat (ISO 15740). ObjectInfo 의 4–5 바이트.
+abstract final class PtpObjectFormat {
+  static const jpeg = 0x3801;
+}
+
+/// 후지필름 전용 명령 코드. RAF 를 카메라로 보낼 때 쓴다 (FilmKit `src/ptp/constants.ts`).
+abstract final class FujiOp {
+  static const sendObjectInfo = 0x900C;
+  static const sendObject2 = 0x900D;
+
+  /// RAF 의 ObjectFormat. 다른 값이면 카메라가 응답 없이 무시한다.
+  static const rafFormat = 0xF802;
 }
 
 /// PTP 응답 코드 (ISO 15740).
@@ -21,6 +39,12 @@ abstract final class FujiProp {
   static const presetSlot = 0xD18C;
   static const presetName = 0xD18D;
   static const presetFirst = 0xD18E;
+
+  /// RAW 현상 프로필. RAF 를 보낸 뒤에 읽고 쓸 수 있다.
+  static const rawProfile = 0xD185;
+
+  /// u16 0 을 쓰면 RAW 현상을 시작한다.
+  static const startRawConversion = 0xD183;
   static const presetLast = 0xD1A5;
 
   static const slotCount = 7;

@@ -28,7 +28,9 @@ class PtpChannel(private val context: Context) : MethodChannel.MethodCallHandler
         const val CHANNEL = "recipe_slot_manager/ptp"
         private const val FUJIFILM_VENDOR_ID = 0x04CB
         private const val TRANSFER_TIMEOUT_MS = 5000
-        private const val READ_BUFFER_SIZE = 64 * 1024
+
+        /** 큰 데이터(RAF, 현상 결과)는 이 크기씩 나눠 주고받아, 한 번의 전송이 시간 제한 안에 끝나게 한다. */
+        private const val CHUNK_SIZE = 1024 * 1024
         private const val ACTION_USB_PERMISSION =
             "dev.supsuphae.recipe_slot_manager.USB_PERMISSION"
     }
@@ -80,7 +82,10 @@ class PtpChannel(private val context: Context) : MethodChannel.MethodCallHandler
                     ?: return result.error("arguments", "보낼 바이트가 없다", null)
                 runOnWorker(result) { write(bytes); null }
             }
-            "read" -> runOnWorker(result) { read() }
+            "read" -> {
+                val timeoutMs = (call.arguments as? Number)?.toInt() ?: TRANSFER_TIMEOUT_MS
+                runOnWorker(result) { read(timeoutMs) }
+            }
             "close" -> runOnWorker(result) { close(); null }
             else -> result.notImplemented()
         }
@@ -171,7 +176,8 @@ class PtpChannel(private val context: Context) : MethodChannel.MethodCallHandler
         var offset = 0
         while (offset < bytes.size) {
             val sent = current.connection.bulkTransfer(
-                current.bulkOut, bytes, offset, bytes.size - offset, TRANSFER_TIMEOUT_MS,
+                current.bulkOut, bytes, offset, minOf(bytes.size - offset, CHUNK_SIZE),
+                TRANSFER_TIMEOUT_MS,
             )
             // 0 이면 offset 이 늘지 않아 같은 바이트를 끝없이 보내게 된다.
             if (sent <= 0) throw PtpError("timeout", "USB 쓰기 시간 초과")
@@ -183,11 +189,11 @@ class PtpChannel(private val context: Context) : MethodChannel.MethodCallHandler
         }
     }
 
-    private fun read(): ByteArray {
+    private fun read(timeoutMs: Int): ByteArray {
         val current = requireLink()
-        val buffer = ByteArray(READ_BUFFER_SIZE)
+        val buffer = ByteArray(CHUNK_SIZE)
         val received = current.connection.bulkTransfer(
-            current.bulkIn, buffer, buffer.size, TRANSFER_TIMEOUT_MS,
+            current.bulkIn, buffer, buffer.size, timeoutMs,
         )
         if (received < 0) throw PtpError("timeout", "USB 응답 시간 초과")
         return buffer.copyOf(received)

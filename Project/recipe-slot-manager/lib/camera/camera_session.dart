@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:recipe_slot_manager/camera/camera_log.dart';
 import 'package:recipe_slot_manager/camera/fuji_camera.dart';
+import 'package:recipe_slot_manager/camera/raw_developer.dart';
 import 'package:recipe_slot_manager/camera/slot_backup_store.dart';
 import 'package:recipe_slot_manager/camera/slot_snapshot.dart';
 import 'package:recipe_slot_manager/ptp/ptp_codes.dart';
@@ -39,6 +40,8 @@ class CameraSession extends ChangeNotifier {
       failure = e.message;
     } on FileSystemException catch (e) {
       failure = '백업 파일 ${e.message}';
+    } on RawDevelopException catch (e) {
+      failure = e.message;
     } on FormatException catch (e) {
       failure = '형식 오류: ${e.message}';
     } finally {

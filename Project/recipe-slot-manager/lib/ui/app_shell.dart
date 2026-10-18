@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:recipe_slot_manager/camera/camera_session.dart';
+import 'package:recipe_slot_manager/camera/raw_developer.dart';
 import 'package:recipe_slot_manager/design/tokens.dart';
 import 'package:recipe_slot_manager/library/library_store.dart';
 import 'package:recipe_slot_manager/ui/design_gallery_page.dart';
 import 'package:recipe_slot_manager/ui/loadout_list_page.dart';
 import 'package:recipe_slot_manager/ui/log_panel.dart';
+import 'package:recipe_slot_manager/ui/raw_preview_page.dart';
 import 'package:recipe_slot_manager/ui/recipe_list_page.dart';
 import 'package:recipe_slot_manager/ui/slots_page.dart';
 
@@ -13,13 +15,14 @@ const _destinations = [
   (Icons.tune, '레시피'),
   (Icons.view_week_outlined, '묶음'),
   (Icons.table_chart_outlined, '카메라 슬롯'),
+  (Icons.photo_filter_outlined, 'RAW 미리보기'),
   (Icons.palette_outlined, '디자인'),
 ];
 
 /// 위쪽 카메라 연결 막대, 아래쪽 작업 로그, 화면 탐색으로 된 앱의 바깥 틀.
 ///
-/// 폭이 [compactWidth] 보다 좁거나 높이가 [compactHeight] 보다 낮으면(휴대폰) 아래 탭과
-/// 접힌 로그를 쓰고, 그 밖에는 왼쪽 레일과 펼친 로그를 쓴다.
+/// 휴대폰 배치([AppBreakpoints])에서는 아래 탭과 접힌 로그를 쓰고, 그 밖에는 왼쪽 레일과 펼친
+/// 로그를 쓴다.
 class AppShell extends StatefulWidget {
   const AppShell({
     super.key,
@@ -28,9 +31,6 @@ class AppShell extends StatefulWidget {
     this.headerActions = const [],
     this.initialIndex = 0,
   });
-
-  static const compactWidth = 600.0;
-  static const compactHeight = 500.0;
 
   final CameraSession session;
   final LibraryStore library;
@@ -46,18 +46,26 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   late var _index = widget.initialIndex;
 
+  /// 보낸 RAF 를 화면을 오가도 기억하도록 셸이 들고 있는다.
+  late final _developer = RawDeveloper(widget.session.camera);
+
   void _select(int index) => setState(() => _index = index);
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
     final compact =
-        size.width < AppShell.compactWidth ||
-        size.height < AppShell.compactHeight;
+        size.width < AppBreakpoints.compactWidth ||
+        size.height < AppBreakpoints.compactHeight;
     final page = switch (_index) {
       0 => RecipeListPage(library: widget.library, session: widget.session),
       1 => LoadoutListPage(library: widget.library, session: widget.session),
       2 => SlotsPage(session: widget.session),
+      3 => RawPreviewPage(
+        session: widget.session,
+        library: widget.library,
+        developer: _developer,
+      ),
       _ => const DesignGalleryPage(),
     };
     final content = Column(

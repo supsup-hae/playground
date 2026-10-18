@@ -51,11 +51,15 @@ class AndroidPtpTransport implements PtpTransport {
   });
 
   @override
-  Future<PtpReply> send(Uint8List command, {Uint8List? data}) => _calls.run(
+  Future<PtpReply> send(
+    Uint8List command, {
+    Uint8List? data,
+    Duration? timeout,
+  }) => _calls.run(
     () => guardPtpChannel(() {
       _lastTransactionId = ByteData.sublistView(command)
           .getUint32(8, Endian.little);
-      return _transact(command, data: data);
+      return _transact(command, data: data, timeout: timeout);
     }),
   );
 
@@ -73,7 +77,11 @@ class AndroidPtpTransport implements PtpTransport {
     await guardPtpChannel(() => ptpChannel.invokeMethod<void>('close'));
   });
 
-  Future<PtpReply> _transact(Uint8List command, {Uint8List? data}) async {
+  Future<PtpReply> _transact(
+    Uint8List command, {
+    Uint8List? data,
+    Duration? timeout,
+  }) async {
     await ptpChannel.invokeMethod<void>('write', command);
     if (data != null) {
       await ptpChannel.invokeMethod<void>(
@@ -83,29 +91,39 @@ class AndroidPtpTransport implements PtpTransport {
     }
     return _readReply(
       ByteData.sublistView(command).getUint32(8, Endian.little),
+      timeout,
     );
   }
 
   /// [transactionId] 의 응답 컨테이너가 올 때까지 bulk IN 을 읽는다. 한 패킷에 컨테이너
   /// 여럿이 오거나 컨테이너 하나가 여러 패킷으로 쪼개져 와도 머리말의 길이로 나눈다.
   /// 시간이 초과된 앞 명령의 늦은 데이터·응답은 transaction ID 가 달라 건너뛴다.
-  Future<PtpReply> _readReply(int transactionId) async {
+  Future<PtpReply> _readReply(int transactionId, Duration? timeout) async {
     final payload = BytesBuilder(copy: false);
-    var pending = Uint8List(0);
+    // 아직 해석하지 않은 바이트. 컨테이너 하나를 다 받을 때까지는 이어 붙이지 않는다.
+    final unread = BytesBuilder(copy: false);
+    var needed = ptpHeaderLength;
     var emptyReads = 0;
     while (true) {
-      while (pending.length >= ptpHeaderLength) {
-        final header = ptpContainerHeader(pending);
+      while (unread.length >= needed) {
+        final bytes = unread.takeBytes();
+        final header = ptpContainerHeader(bytes);
         if (header.length < ptpHeaderLength) {
           throw FormatException('PTP 컨테이너 길이 ${header.length} 가 머리말보다 짧다');
         }
-        if (pending.length < header.length) break;
-        final body = pending.sublist(ptpHeaderLength, header.length);
-        pending = pending.sublist(header.length);
+        if (bytes.length < header.length) {
+          unread.add(bytes);
+          needed = header.length;
+          break;
+        }
+        unread.add(Uint8List.sublistView(bytes, header.length));
+        needed = ptpHeaderLength;
         if (header.transactionId != transactionId) continue;
         switch (header.type) {
           case ptpDataType:
-            payload.add(body);
+            payload.add(
+              Uint8List.sublistView(bytes, ptpHeaderLength, header.length),
+            );
           case ptpResponseType:
             return PtpReply(header.code, payload.takeBytes());
           default:
@@ -113,7 +131,11 @@ class AndroidPtpTransport implements PtpTransport {
         }
       }
       final packet =
-          await ptpChannel.invokeMethod<Uint8List>('read') ?? Uint8List(0);
+          await ptpChannel.invokeMethod<Uint8List>(
+            'read',
+            timeout?.inMilliseconds,
+          ) ??
+          Uint8List(0);
       if (packet.isEmpty) {
         if (++emptyReads >= _maxEmptyReads) {
           throw const PtpTransportException('카메라가 응답 컨테이너를 보내지 않았다');
@@ -121,7 +143,7 @@ class AndroidPtpTransport implements PtpTransport {
         continue;
       }
       emptyReads = 0;
-      pending = Uint8List.fromList([...pending, ...packet]);
+      unread.add(packet);
     }
   }
 }

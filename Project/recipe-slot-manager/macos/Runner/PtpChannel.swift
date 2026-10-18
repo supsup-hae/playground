@@ -109,6 +109,8 @@ final class PtpChannel: NSObject {
       return
     }
     let outData = (args["data"] as? FlutterStandardTypedData)?.data
+    // 큰 파일(RAF 보내기, 현상 결과 받기)은 Dart 가 시간 제한을 늘려 보낸다.
+    let timeoutSeconds = (args["timeout"] as? Double) ?? Self.sendTimeout
     sendInFlight = true
 
     // 시간이 초과된 명령은 카메라 쪽에 남아 있을 수 있으므로 세션을 닫고 다시 연결하게 한다.
@@ -119,7 +121,7 @@ final class PtpChannel: NSObject {
       self?.resetSession()
       result(FlutterError(code: "timeout", message: "PTP 응답 시간 초과로 연결을 끊었다", details: nil))
     }
-    DispatchQueue.main.asyncAfter(deadline: .now() + Self.sendTimeout, execute: timeout)
+    DispatchQueue.main.asyncAfter(deadline: .now() + timeoutSeconds, execute: timeout)
 
     camera.requestSendPTPCommand(command.data, outData: outData) { [weak self] data, response, error in
       DispatchQueue.main.async {

@@ -32,7 +32,7 @@ void main() {
 
         expect(find.byType(NavigationBar), findsOneWidget);
         expect(find.byType(NavigationRail), findsNothing);
-        for (final label in ['묶음', '카메라 슬롯', '디자인', '레시피']) {
+        for (final label in ['묶음', '카메라 슬롯', 'RAW 미리보기', '디자인', '레시피']) {
           await tester.tap(find.text(label).last);
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull, reason: label);

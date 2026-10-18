@@ -8,7 +8,12 @@ abstract interface class PtpTransport {
   Future<String> connect();
 
   /// 명령 컨테이너를 보내고 응답을 받는다. [data] 는 카메라로 보내는 값 바이트다.
-  Future<PtpReply> send(Uint8List command, {Uint8List? data});
+  /// [timeout] 이 없으면 플랫폼 기본 시간 제한(5초)을 쓴다. 큰 파일을 주고받는 명령만 늘린다.
+  Future<PtpReply> send(
+    Uint8List command, {
+    Uint8List? data,
+    Duration? timeout,
+  });
 
   Future<void> disconnect();
 }

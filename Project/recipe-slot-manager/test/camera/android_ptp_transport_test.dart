@@ -47,12 +47,16 @@ void main() {
   /// 다음 `read` 마다 하나씩 돌려줄 bulk IN 패킷.
   final packets = <Uint8List>[];
   final methods = <String>[];
+
+  /// `read` 호출마다 받은 시간 제한 인자(ms).
+  final readTimeouts = <Object?>[];
   Object? writeError;
 
   setUp(() {
     written.clear();
     packets.clear();
     methods.clear();
+    readTimeouts.clear();
     writeError = null;
     messenger.setMockMethodCallHandler(channel, (call) async {
       methods.add(call.method);
@@ -64,6 +68,7 @@ void main() {
           written.add(call.arguments as Uint8List);
           return null;
         case 'read':
+          readTimeouts.add(call.arguments);
           return packets.removeAt(0);
         case 'close':
           return null;
@@ -203,6 +208,44 @@ void main() {
       await Future.wait([transport.send(getSlot), transport.send(next)]);
 
       expect(methods, ['write', 'read', 'write', 'read']);
+    });
+
+    test('시간 제한을 주면 read 에 ms 로 싣고, 없으면 싣지 않는다', () async {
+      packets.addAll([
+        response(PtpResponse.ok, 5),
+        response(PtpResponse.ok, 5),
+      ]);
+      final transport = AndroidPtpTransport();
+
+      await transport.send(getSlot, timeout: const Duration(seconds: 60));
+      await transport.send(getSlot);
+
+      expect(readTimeouts, [60000, null]);
+    });
+
+    test('20 MB 데이터가 64 KiB 패킷 수백 개로 와도 빨리 모은다', () async {
+      final payload = Uint8List(20 * 1024 * 1024)..[12345] = 7;
+      final whole = join([
+        ptpDataContainer(getSlot, payload),
+        response(PtpResponse.ok, 5),
+      ]);
+      const packet = 64 * 1024;
+      for (var at = 0; at < whole.length; at += packet) {
+        packets.add(
+          Uint8List.sublistView(
+            whole,
+            at,
+            at + packet < whole.length ? at + packet : whole.length,
+          ),
+        );
+      }
+      final watch = Stopwatch()..start();
+
+      final reply = await AndroidPtpTransport().send(getSlot);
+
+      expect(reply.data.length, payload.length);
+      expect(reply.data[12345], 7);
+      expect(watch.elapsed, lessThan(const Duration(seconds: 2)));
     });
 
     test('데이터·응답이 아닌 컨테이너는 PtpTransportException 을 던진다', () async {
