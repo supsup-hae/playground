@@ -12,7 +12,7 @@ import 'package:recipe_slot_manager/ui/slots_page.dart';
 const _destinations = [
   (Icons.tune, '레시피'),
   (Icons.view_week_outlined, '묶음'),
-  (Icons.table_chart_outlined, '원시 값'),
+  (Icons.table_chart_outlined, '카메라 슬롯'),
   (Icons.palette_outlined, '디자인'),
 ];
 
@@ -55,7 +55,7 @@ class _AppShellState extends State<AppShell> {
         size.width < AppShell.compactWidth ||
         size.height < AppShell.compactHeight;
     final page = switch (_index) {
-      0 => RecipeListPage(library: widget.library),
+      0 => RecipeListPage(library: widget.library, session: widget.session),
       1 => LoadoutListPage(library: widget.library, session: widget.session),
       2 => SlotsPage(session: widget.session),
       _ => const DesignGalleryPage(),

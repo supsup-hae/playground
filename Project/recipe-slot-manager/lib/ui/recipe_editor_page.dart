@@ -16,11 +16,15 @@ class RecipeEditorPage extends StatefulWidget {
     required this.library,
     required this.recipe,
     required this.isNew,
+    this.note,
   });
 
   final LibraryStore library;
   final Recipe recipe;
   final bool isNew;
+
+  /// 화면 위에 보일 안내 (가져온 출처와 읽은 항목 수).
+  final String? note;
 
   @override
   State<RecipeEditorPage> createState() => _RecipeEditorPageState();
@@ -84,6 +88,14 @@ class _RecipeEditorPageState extends State<RecipeEditorPage> {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.xl),
         children: [
+          if (widget.note case final note?)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+              child: Text(
+                note,
+                style: const TextStyle(color: AppColors.textMuted),
+              ),
+            ),
           TextFormField(
             key: const ValueKey('recipe-name'),
             initialValue: _name,

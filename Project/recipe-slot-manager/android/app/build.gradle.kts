@@ -47,3 +47,8 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // 이미지 글자 인식 (한국어 모델, 라틴 글자 포함)
+    implementation("com.google.mlkit:text-recognition-korean:16.0.1")
+}

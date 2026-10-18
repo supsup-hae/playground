@@ -10,6 +10,7 @@ class MainFlutterWindow: NSWindow {
 
     RegisterGeneratedPlugins(registry: flutterViewController)
     PtpChannel.register(with: flutterViewController.registrar(forPlugin: "PtpChannel"))
+    OcrChannel.register(with: flutterViewController.registrar(forPlugin: "OcrChannel"))
 
     super.awakeFromNib()
   }
