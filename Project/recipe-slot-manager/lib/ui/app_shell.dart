@@ -132,23 +132,45 @@ class CameraBar extends StatelessWidget {
               color: session.connected ? AppColors.accent : AppColors.textMuted,
             ),
             const SizedBox(width: AppSpacing.sm),
-            Text(session.model ?? '카메라 없음'),
-            const Spacer(),
-            if (session.busy)
-              const Padding(
-                padding: EdgeInsets.only(right: AppSpacing.md),
-                child: SizedBox.square(
-                  dimension: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+            Flexible(
+              child: Text(
+                session.model ?? '카메라 없음',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            // 글꼴이 커서 버튼이 다 들어가지 않으면 가로로 밀어 볼 수 있게 한다.
+            Flexible(
+              flex: 3,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  reverse: true,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (session.busy)
+                        const Padding(
+                          padding: EdgeInsets.only(right: AppSpacing.md),
+                          child: SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      ...actions,
+                      const SizedBox(width: AppSpacing.sm),
+                      FilledButton(
+                        onPressed: session.connected || session.busy
+                            ? null
+                            : session.connect,
+                        child: const Text('연결'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ...actions,
-            const SizedBox(width: AppSpacing.sm),
-            FilledButton(
-              onPressed: session.connected || session.busy
-                  ? null
-                  : session.connect,
-              child: const Text('연결'),
             ),
           ],
         ),

@@ -117,6 +117,20 @@ void main() {
     });
   }
 
+  testWidgets('글꼴을 크게 키운 좁은 화면에서도 카메라 막대가 넘치지 않는다', (tester) async {
+    tester.platformDispatcher.textScaleFactorTestValue = 1.6;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await tester.runAsync(app.session.connect);
+    await app.pumpShell(
+      tester,
+      size: phoneSizes['화면 크기 확대']!,
+      headerActions: const [SyncBar(sync: null, auth: null)],
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('연결'), findsOneWidget);
+  });
+
   testWidgets('창 크기가 배치 기준을 넘나들어도 화면 상태가 남는다', (tester) async {
     await tester.runAsync(app.session.connect);
     await app.pumpShell(tester, index: 2);
