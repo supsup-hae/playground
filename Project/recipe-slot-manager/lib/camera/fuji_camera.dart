@@ -28,10 +28,15 @@ class FujiCamera {
   /// 지금 작업에서 슬롯을 선택했는지. 끝날 때 원래 슬롯으로 되돌릴지 정한다.
   var _slotChanged = false;
 
+  /// 연결할 때마다 1씩 는다. 카메라 쪽 상태(보낸 RAF 등)가 이 세션에 속하는지 가린다.
+  int get sessionNumber => _sessionNumber;
+  var _sessionNumber = 0;
+
   /// 새 세션을 연다. PTP 규칙대로 세션마다 transaction ID 를 1 부터 다시 센다.
   Future<String> connect() async {
     final model = await _transport.connect();
     _transactionId = 0;
+    _sessionNumber++;
     log.add('$model 연결');
     return model;
   }
@@ -190,14 +195,23 @@ class FujiCamera {
   Future<int> _setProp(int prop, Uint8List value) async =>
       (await _send(PtpOp.setDevicePropValue, prop, data: value)).code;
 
-  Future<PtpReply> _send(int op, int prop, {Uint8List? data}) {
+  Future<PtpReply> _send(int op, int prop, {Uint8List? data}) =>
+      command(op, params: [prop], data: data);
+
+  /// 명령 하나를 보낸다. 슬롯 작업과 RAW 현상이 이 세션의 transaction ID 를 함께 쓴다.
+  Future<PtpReply> command(
+    int op, {
+    List<int> params = const [],
+    Uint8List? data,
+    Duration? timeout,
+  }) {
     _roundTrips++;
     final command = ptpCommand(
       op,
       transactionId: ++_transactionId,
-      params: [prop],
+      params: params,
     );
-    return _transport.send(command, data: data);
+    return _transport.send(command, data: data, timeout: timeout);
   }
 
   (Stopwatch, int) _startTiming() => (Stopwatch()..start(), _roundTrips);
