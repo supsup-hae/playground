@@ -30,6 +30,60 @@ final class PhotoInfo {
   /// 후지 MakerNote 의 레시피 값. 후지 사진이 아니면 비어 있다.
   final Map<String, double> recipe;
 
+  /// 색인 파일에서 읽는다. 형식이 맞지 않으면 [FormatException].
+  factory PhotoInfo.fromJson(Object? json) {
+    if (json case {'recipe': final Map<String, dynamic> recipe}
+        when recipe.values.every((v) => v is num)) {
+      return PhotoInfo(
+        shotAt: switch (json['shotAt']) {
+          null => null,
+          final String text => _parseWallTime(text),
+          final other => throw FormatException('사진 정보 형식 오류', other),
+        },
+        utcOffset: switch (json['utcOffsetMinutes']) {
+          null => null,
+          final int minutes => Duration(minutes: minutes),
+          final other => throw FormatException('사진 정보 형식 오류', other),
+        },
+        location: switch ((json['latitude'], json['longitude'])) {
+          (null, null) => null,
+          (final num latitude, final num longitude) => (
+            latitude: latitude.toDouble(),
+            longitude: longitude.toDouble(),
+          ),
+          final other => throw FormatException('사진 정보 형식 오류', other),
+        },
+        model: switch (json['model']) {
+          null => null,
+          final String model => model,
+          final other => throw FormatException('사진 정보 형식 오류', other),
+        },
+        imageCount: switch (json['imageCount']) {
+          null => null,
+          final int count => count,
+          final other => throw FormatException('사진 정보 형식 오류', other),
+        },
+        recipe: Map.unmodifiable({
+          for (final MapEntry(:key, :value) in recipe.entries)
+            key: (value as num).toDouble(),
+        }),
+      );
+    }
+    throw FormatException('사진 정보 형식 오류', json);
+  }
+
+  Map<String, Object> toJson() => {
+    if (shotAt case final shotAt?) 'shotAt': _wallTime(shotAt),
+    if (utcOffset case final offset?) 'utcOffsetMinutes': offset.inMinutes,
+    if (location case final location?) ...{
+      'latitude': location.latitude,
+      'longitude': location.longitude,
+    },
+    'model': ?model,
+    'imageCount': ?imageCount,
+    'recipe': recipe,
+  };
+
   /// 기기가 달라도 같은 사진이면 같은 값. 기종·시각·시간대·촬영 번호 중 하나라도 없으면 null.
   String? get key {
     final shotAt = this.shotAt;
@@ -139,6 +193,11 @@ GeoPoint? _location(Exif exif) {
   if (latitude == 0 && longitude == 0) return null;
   return (latitude: latitude, longitude: longitude);
 }
+
+/// [_wallTime] 이 쓴 벽시계 시각을 [DateTime.utc] 로 읽는다.
+DateTime _parseWallTime(String text) =>
+    DateTime.tryParse('${text}Z') ??
+    (throw FormatException('사진 정보 형식 오류', text));
 
 String _two(int value) => value.toString().padLeft(2, '0');
 
