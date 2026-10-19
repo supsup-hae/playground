@@ -9,10 +9,15 @@ import 'package:recipe_slot_manager/camera/fuji_camera.dart';
 import 'package:recipe_slot_manager/camera/slot_backup_store.dart';
 import 'package:recipe_slot_manager/design/app_theme.dart';
 import 'package:recipe_slot_manager/library/library_store.dart';
+import 'package:recipe_slot_manager/photo/photo_index_store.dart';
+import 'package:recipe_slot_manager/photo/photo_indexer.dart';
+import 'package:recipe_slot_manager/photo/photo_source.dart';
 import 'package:recipe_slot_manager/ptp/ptp_codes.dart';
 import 'package:recipe_slot_manager/ptp/ptp_string.dart';
 import 'package:recipe_slot_manager/ui/app_shell.dart';
+import 'package:recipe_slot_manager/ui/photos_page.dart';
 
+import 'fake_photo_reader.dart';
 import 'fake_ptp_transport.dart';
 
 Uint8List u16(int value) => (ByteData(
@@ -39,6 +44,7 @@ class TestApp {
       FujiCamera(transport, slotSwitchDelay: Duration.zero),
       backups,
     );
+    photoStore = PhotoIndexStore(Directory(p.join(root.path, 'photos')));
   }
 
   final Directory root;
@@ -46,6 +52,28 @@ class TestApp {
   late final SlotBackupStore backups;
   late final LibraryStore library;
   late final CameraSession session;
+  late final PhotoIndexStore photoStore;
+
+  /// 모든 출처(폴더)를 읽는 가짜 출처.
+  final photoReader = FakePhotoReader();
+
+  /// 사진 화면 준비. [addSource] 가 없으면 출처를 고르지 않은 것으로 본다.
+  PhotosSetup photos({
+    Future<PhotoSource?> Function(BuildContext context)? addSource,
+    Future<void> Function()? allowLocation,
+  }) => (
+    store: photoStore,
+    indexer: PhotoIndexer(
+      photoStore,
+      readers: {
+        PhotoSourceKind.folder: photoReader,
+        PhotoSourceKind.album: photoReader,
+      },
+      log: session.log,
+    ),
+    addSource: addSource ?? (_) async => null,
+    allowLocation: allowLocation,
+  );
 
   void dispose() => root.deleteSync(recursive: true);
 
@@ -72,6 +100,7 @@ class TestApp {
         home: AppShell(
           session: session,
           library: library,
+          photos: photos(),
           initialIndex: index,
           headerActions: headerActions,
         ),
