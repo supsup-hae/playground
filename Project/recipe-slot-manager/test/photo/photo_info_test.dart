@@ -243,11 +243,16 @@ void main() {
       expect(info.key, 'X-T5|2026-10-11T15:26:10+09:00|1422');
     });
 
-    test('카메라·렌즈 일련번호가 지워져 있다', () {
+    test('일련번호·소유자·작성자·저작권 값 바이트가 모두 0 이다', () {
       final exif = readExif(fixture);
+      final entries = [
+        for (final tag in [0xA430, 0xA431, 0xA435]) exif.exif![tag],
+        for (final tag in [0x013B, 0x8298]) exif.ifd0[tag],
+      ].nonNulls;
 
-      for (final tag in [0xA431, 0xA435]) {
-        expect(ifdString(exif.tiff, exif.exif![tag]!), isEmpty);
+      expect(entries, isNotEmpty);
+      for (final entry in entries) {
+        expect(ifdBytes(exif.tiff, entry).every((b) => b == 0), isTrue);
       }
     });
   });

@@ -100,7 +100,7 @@ group('readMakerNote', () {
 | `test/support/exif_builder.dart` | UPDATE | ASCII·RATIONAL 값, IFD0·Exif·GPS 태그 인자 |
 | `test/import/jpeg_exif_test.dart` | CREATE | RATIONAL 값 위치, 문자열 |
 | `test/photo/photo_info_test.dart` | CREATE | 가짜 EXIF 와 실제 표본 자료로 `readPhotoInfo` |
-| `tool/make_exif_fixture.dart` | CREATE | `samples/` 의 JPEG 에서 APP1 만 남기고 일련번호·썸네일을 지운 시험 자료를 만든다 |
+| `tool/make_exif_fixture.dart` | CREATE | `samples/` 의 JPEG 에서 APP1 만 남기고 일련번호·소유자·작성자·저작권·썸네일을 지운 시험 자료를 만든다. GPS 값이 있으면 거부 |
 | `test/fixtures/x_t5_eterna.jpg` | CREATE | 위 도구의 결과 (SOI + APP1 + EOI, 약 64 KiB) |
 | `docs/unverified.md` | UPDATE | "사진 기록" 절: 위치 동기화를 켠 사진의 GPS |
 | `docs/photo-log.prd.md` | UPDATE | 1단계 상태와 계획 연결 |
@@ -163,7 +163,7 @@ group('readMakerNote', () {
 
 ### Task C1: 실제 표본 시험 자료 (`tool/make_exif_fixture.dart`)
 - **ACTION**: `dart run tool/make_exif_fixture.dart samples/<파일>.jpg test/fixtures/x_t5_eterna.jpg`
-- **IMPLEMENT**: SOI + 원본 APP1 + EOI. APP1 안에서 BodySerialNumber(`0xA431`)·LensSerialNumber(`0xA435`)·InternalSerialNumber(MakerNote `0x0010`) 값 바이트와 IFD1 썸네일 바이트(`0x0201` 위치부터 `0x0202` 길이)를 0 으로 채운다. GPS 에 값이 있으면 실패한다(위치가 든 사진은 시험 자료로 만들지 않는다)
+- **IMPLEMENT**: SOI + 원본 APP1 + EOI. APP1 안에서 BodySerialNumber(`0xA431`)·LensSerialNumber(`0xA435`)·InternalSerialNumber(MakerNote `0x0010`), CameraOwnerName(`0xA430`), Artist(`0x013B`)·Copyright(`0x8298`) 값 바이트와 IFD1 썸네일 바이트(`0x0201` 위치부터 `0x0202` 길이)를 0 으로 채운다. GPS IFD 값에 0 이 아닌 바이트가 있거나 GPS IFD 를 읽을 수 없으면 실패한다(위치가 든 사진은 시험 자료로 만들지 않는다)
 - **GOTCHA**: 바이트 길이와 위치는 그대로 둔다(IFD 위치가 바뀌지 않게). `samples/` 는 커밋하지 않는다. 표본은 사용자가 대화에 올린 2장을 `samples/` 에 복사해 쓴다
 - **VALIDATE**: 결과 파일에서 `6BA08168` 문자열과 썸네일 SOI(`FF D8`, 파일 머리 제외)가 없다. `readPhotoInfo` 가 Eterna·위치 없음·`2026-10-11 15:26:10 +09:00`·1422 를 돌려준다
 
@@ -189,7 +189,7 @@ group('readMakerNote', () {
 | 음의 시간대 | `-05:30` | −5h30m | ✓ |
 | 시간대 없음 | `0x9011` 없음 | offset null, key null | |
 | 빈 시각 | `0000:00:00 00:00:00` | shotAt null | ✓ |
-| 후지 사진 | MakerNote FilmMode 0x700, ImageCount 1422 | recipe 의 filmSimulation 0x10, imageCount 1422, key `X-T5|2026-10-11T15:26:10+09:00|1422` | |
+| 후지 사진 | MakerNote FilmMode 0x700, ImageCount 1422 | recipe 의 filmSimulation 0x10, imageCount 1422, key `X-T5\|2026-10-11T15:26:10+09:00\|1422` | |
 | 후지가 아닌 MakerNote | `NIKON...` | recipe 빈 맵, 예외 없음 | ✓ |
 | MakerNote 없음 | | recipe 빈 맵 | |
 | 빅 엔디언 | 같은 값 | 같은 결과 | ✓ |

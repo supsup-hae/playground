@@ -79,6 +79,7 @@ Uint8List fujiMakerNote(Map<int, (int, List<int>)> tags) {
 /// SOI + APP1(Exif) + EOI 로 된 최소 JPEG. [makerNote] 가 null 이면 Exif IFD 에 MakerNote 를 넣지 않는다.
 /// [ifd0Tags]·[exifTags] 는 각 IFD 에 더할 태그, [gpsTags] 가 있으면 GPS IFD 를 만든다.
 /// [brokenExifPointer] 면 Exif IFD 위치 태그에 값을 두 개 넣는다(깨진 파일).
+/// [brokenGpsPointer] 면 GPS IFD 위치를 TIFF 밖으로 둔다(깨진 파일).
 Uint8List jpegWithExif({
   Uint8List? makerNote,
   Map<int, (int, List<int>)> ifd0Tags = const {},
@@ -86,6 +87,7 @@ Uint8List jpegWithExif({
   Map<int, (int, List<int>)>? gpsTags,
   bool bigEndian = false,
   bool brokenExifPointer = false,
+  bool brokenGpsPointer = false,
 }) {
   final endian = bigEndian ? Endian.big : Endian.little;
   const ifd0At = 8;
@@ -96,7 +98,8 @@ Uint8List jpegWithExif({
   Map<int, (int, List<int>)> ifd0Entries(int exifAt, int gpsAt) => {
     ...ifd0Tags,
     0x8769: (tiffLong, [exifAt, if (brokenExifPointer) 0]),
-    if (gpsTags != null) 0x8825: (tiffLong, [gpsAt]),
+    if (gpsTags != null)
+      0x8825: (tiffLong, [if (brokenGpsPointer) 0xFFFFFF else gpsAt]),
   };
   // 값 영역 길이는 위치와 무관하므로 한 번 만들어 길이를 잰 뒤 실제 위치로 다시 만든다.
   final exifAt = ifd0At + _ifd(ifd0Entries(0, 0), ifd0At, endian).length;

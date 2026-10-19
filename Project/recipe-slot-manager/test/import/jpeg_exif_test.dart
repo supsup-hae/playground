@@ -24,6 +24,19 @@ void main() {
       expect(readExif(jpegWithExif()).gps, isNull);
     });
 
+    test('GPS IFD 위치가 TIFF 밖이면 gps 만 null 이고 MakerNote 는 읽는다', () {
+      final jpeg = jpegWithExif(
+        makerNote: fujiMakerNote({
+          0x1401: (tiffShort, [0x700]),
+        }),
+        gpsTags: {0x0001: (tiffAscii, asciiValue('N'))},
+        brokenGpsPointer: true,
+      );
+
+      expect(readExif(jpeg).gps, isNull);
+      expect(readMakerNote(jpeg), isNotEmpty);
+    });
+
     test('Exif IFD 위치 값이 하나가 아니면 깨진 파일로 본다', () {
       expect(
         () => readExif(jpegWithExif(brokenExifPointer: true)),
@@ -94,6 +107,18 @@ void main() {
         31.2,
       ]);
     });
+  });
+
+  test('ifdBytes 는 값 바이트 전체를 돌려준다', () {
+    final exif = readExif(
+      jpegWithExif(
+        gpsTags: {
+          0x0002: (tiffRational, [35, 1, 39, 1, 312, 10]),
+        },
+      ),
+    );
+
+    expect(ifdBytes(exif.tiff, exif.gps![0x0002]!), hasLength(24));
   });
 
   test('ifdString 은 첫 NUL 앞까지 읽고 앞뒤 공백을 지운다', () {

@@ -84,13 +84,16 @@ double? _rational(
   return denominator == 0 ? null : numerator / denominator;
 }
 
+/// [entry] 의 값 바이트 전체 (형식 크기 × 개수).
+Uint8List ifdBytes(Uint8List tiff, IfdEntry entry) => Uint8List.sublistView(
+  tiff,
+  entry.offset,
+  entry.offset + (_typeSizes[entry.type] ?? 1) * entry.count,
+);
+
 /// ASCII 값. 첫 NUL 앞까지 읽고 앞뒤 공백을 지운다.
 String ifdString(Uint8List tiff, IfdEntry entry) {
-  final bytes = Uint8List.sublistView(
-    tiff,
-    entry.offset,
-    entry.offset + entry.count,
-  );
+  final bytes = ifdBytes(tiff, entry);
   final end = bytes.indexOf(0);
   return String.fromCharCodes(end < 0 ? bytes : bytes.sublist(0, end)).trim();
 }
@@ -171,6 +174,15 @@ Exif _exifIn(Uint8List tiff) {
     endian: endian,
     ifd0: ifd0,
     exif: subIfd(0x8769),
-    gps: subIfd(0x8825),
+    gps: _orNull(() => subIfd(0x8825)),
   );
+}
+
+/// GPS IFD 는 선택 정보라 깨졌으면 없는 것으로 본다.
+Map<int, IfdEntry>? _orNull(Map<int, IfdEntry>? Function() read) {
+  try {
+    return read();
+  } on ImportException {
+    return null;
+  }
 }
