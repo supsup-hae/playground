@@ -7,6 +7,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     private var ptpChannel: PtpChannel? = null
     private var ocrChannel: OcrChannel? = null
+    private var photoChannel: PhotoChannel? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -18,6 +19,19 @@ class MainActivity : FlutterActivity() {
         ocrChannel = ocr
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, OcrChannel.CHANNEL)
             .setMethodCallHandler(ocr)
+        val photos = PhotoChannel(this)
+        photoChannel = photos
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, PhotoChannel.CHANNEL)
+            .setMethodCallHandler(photos)
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ) {
+        if (photoChannel?.onPermissionResult(requestCode) == true) return
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
@@ -25,6 +39,8 @@ class MainActivity : FlutterActivity() {
         ptpChannel = null
         ocrChannel?.dispose()
         ocrChannel = null
+        photoChannel?.dispose()
+        photoChannel = null
         super.cleanUpFlutterEngine(flutterEngine)
     }
 }

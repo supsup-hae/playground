@@ -2,12 +2,10 @@ import 'dart:typed_data';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:path/path.dart' as p;
+import 'package:recipe_slot_manager/import/jpeg_exif.dart';
 
 /// 고른 파일의 이름(확장자 제외)과 바이트. 고르지 않으면 null.
 typedef PickedFile = ({String name, Uint8List bytes});
-
-/// EXIF 가 있는 APP1 은 파일 앞 64 KiB 안에 있다. 넉넉히 앞부분만 읽는다.
-const _jpegHeadBytes = 256 * 1024;
 
 const _jpeg = XTypeGroup(
   label: 'JPEG',
@@ -27,7 +25,7 @@ const _images = XTypeGroup(
 Future<PickedFile?> pickJpegHead() async {
   final file = await openFile(acceptedTypeGroups: [_jpeg]);
   if (file == null) return null;
-  final chunks = await file.openRead(0, _jpegHeadBytes).toList();
+  final chunks = await file.openRead(0, jpegHeadBytes).toList();
   return (
     name: p.basenameWithoutExtension(file.name),
     bytes: Uint8List.fromList([for (final chunk in chunks) ...chunk]),
