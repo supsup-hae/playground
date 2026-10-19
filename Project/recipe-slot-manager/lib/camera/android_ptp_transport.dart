@@ -36,7 +36,7 @@ class AndroidPtpTransport implements PtpTransport {
       );
       if (!reply.isOk && reply.code != PtpResponse.sessionAlreadyOpen) {
         throw PtpTransportException(
-          '세션을 열지 못했다 (응답 0x${reply.code.toRadixString(16)})',
+          '세션 열기 실패 (응답 0x${reply.code.toRadixString(16)})',
         );
       }
     } on PtpTransportException {
@@ -109,7 +109,7 @@ class AndroidPtpTransport implements PtpTransport {
         final bytes = unread.takeBytes();
         final header = ptpContainerHeader(bytes);
         if (header.length < ptpHeaderLength) {
-          throw FormatException('PTP 컨테이너 길이 ${header.length} 가 머리말보다 짧다');
+          throw FormatException('PTP 컨테이너 길이 ${header.length}: 머리말보다 짧음');
         }
         if (bytes.length < header.length) {
           unread.add(bytes);
@@ -127,7 +127,7 @@ class AndroidPtpTransport implements PtpTransport {
           case ptpResponseType:
             return PtpReply(header.code, payload.takeBytes());
           default:
-            throw FormatException('PTP 데이터·응답 컨테이너가 아니다 (타입 ${header.type})');
+            throw FormatException('PTP 데이터·응답 컨테이너 아님 (타입 ${header.type})');
         }
       }
       final packet =
@@ -138,7 +138,7 @@ class AndroidPtpTransport implements PtpTransport {
           Uint8List(0);
       if (packet.isEmpty) {
         if (++emptyReads >= _maxEmptyReads) {
-          throw const PtpTransportException('카메라가 응답 컨테이너를 보내지 않았다');
+          throw const PtpTransportException('응답 컨테이너 없음');
         }
         continue;
       }

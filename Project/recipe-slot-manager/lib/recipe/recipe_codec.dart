@@ -30,7 +30,7 @@ SlotSnapshot encodeValues(
   required SlotSnapshot base,
 }) {
   if (name.length > maxPtpStringLength) {
-    throw FormatException('레시피 이름이 $maxPtpStringLength자를 넘는다', name);
+    throw FormatException('레시피 이름 $maxPtpStringLength자 초과', name);
   }
   final effective = {...decodeSlot(base), ...values};
   final props = Map<int, Uint8List>.of(base.props);
@@ -38,7 +38,7 @@ SlotSnapshot encodeValues(
     final value = values[field.id];
     if (value == null || !props.containsKey(field.prop)) continue;
     if (!field.accepts(value)) {
-      throw FormatException('${field.label} 값이 맞지 않다', value);
+      throw FormatException('${field.label} 값 범위 밖', value);
     }
     if (!isApplicable(field, effective)) continue;
     if (field.id.startsWith('mono') && value == 0) continue;

@@ -29,7 +29,7 @@ class MacosPtpTransport implements PtpTransport {
         data is Uint8List ? data : Uint8List(0),
       );
     }
-    throw const PtpTransportException('PTP 응답이 비어 있다');
+    throw const PtpTransportException('PTP 응답 비어 있음');
   });
 
   @override

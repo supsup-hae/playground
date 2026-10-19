@@ -38,11 +38,11 @@ final class Recipe {
         deletedAt: switch (json['deletedAt']) {
           null => null,
           final String text => parseUtc(text),
-          final other => throw FormatException('deletedAt 형식이 맞지 않다', other),
+          final other => throw FormatException('deletedAt 형식 오류', other),
         },
       );
     }
-    throw FormatException('레시피 형식이 맞지 않다', json);
+    throw FormatException('레시피 형식 오류', json);
   }
 
   /// 32자 16진수.
@@ -103,7 +103,7 @@ String newRecipeId() {
 
 /// ISO 8601 문자열을 UTC 시각으로. 형식이 아니면 [FormatException].
 DateTime parseUtc(String text) =>
-    (DateTime.tryParse(text) ?? (throw FormatException('날짜 형식이 맞지 않다', text)))
+    (DateTime.tryParse(text) ?? (throw FormatException('날짜 형식 오류', text)))
         .toUtc();
 
 Map<String, double> _parseValues(Map<String, dynamic> json) => {
@@ -111,6 +111,6 @@ Map<String, double> _parseValues(Map<String, dynamic> json) => {
     key: switch ((fieldById[key], value)) {
       (final field?, final num number) when field.accepts(number.toDouble()) =>
         number.toDouble(),
-      _ => throw FormatException('레시피 값이 맞지 않다: $key', value),
+      _ => throw FormatException('레시피 값 오류: $key', value),
     },
 };

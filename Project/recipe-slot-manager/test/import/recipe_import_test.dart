@@ -35,7 +35,7 @@ void main() {
     expect(imported.recipe.name, 'Kodak');
     expect(imported.recipe.values, {'highlight': 1});
     expect(imported.recipe.id, hasLength(32));
-    expect(imported.note, 'EXIF에서 1개 항목을 읽었다. 빈칸은 카메라 값을 유지한다');
+    expect(imported.note, 'EXIF에서 1개 항목을 가져왔습니다. 빈칸은 카메라 설정을 유지합니다');
   });
 
   test('이름이 비어 있으면 출처 이름을 쓴다', () {
@@ -45,6 +45,6 @@ void main() {
       source: ImportSource.text,
     );
 
-    expect(imported.recipe.name, '가져온 레시피 (이미지 글자)');
+    expect(imported.recipe.name, '가져온 레시피 (이미지 텍스트)');
   });
 }

@@ -43,8 +43,8 @@ class _RawPreviewPageState extends State<RawPreviewPage> {
           .showSnackBar(SnackBar(content: Text(message)));
 
   Future<void> _loadRaf() async {
-    if (!_session.connected) return _tell('카메라를 먼저 연결할 것');
-    if (_session.busy) return _tell('카메라 작업이 끝난 뒤 다시 할 것');
+    if (!_session.connected) return _tell('카메라를 먼저 연결하세요');
+    if (_session.busy) return _tell('카메라 작업이 끝난 뒤 다시 시도하세요');
     final file = await widget.pickRaf();
     if (file == null || !mounted) return;
     setState(() => _results.updateAll((_, _) => null));
@@ -113,12 +113,12 @@ class _RawPreviewPageState extends State<RawPreviewPage> {
                 OutlinedButton.icon(
                   onPressed: busy ? null : _loadRaf,
                   icon: const Icon(Icons.upload_file_outlined),
-                  label: const Text('RAF 고르기'),
+                  label: const Text('RAF 선택'),
                 ),
                 Text(
                   widget.developer.rafName == null
                       ? 'RAF 없음'
-                      : '${widget.developer.rafName} (카메라에 보냄)',
+                      : '${widget.developer.rafName} (카메라로 전송됨)',
                   style: const TextStyle(color: AppColors.textMuted),
                 ),
               ],
@@ -126,7 +126,7 @@ class _RawPreviewPageState extends State<RawPreviewPage> {
             const SizedBox(height: AppSpacing.lg),
             if (widget.library.recipes.isEmpty)
               const Text(
-                '보관함에 레시피가 없다. 레시피 탭에서 만들거나 가져올 것',
+                '보관함에 레시피가 없습니다. 레시피 탭에서 만들거나 가져오세요',
                 style: TextStyle(color: AppColors.textMuted),
               )
             else if (compact)
@@ -165,7 +165,7 @@ class _RawPreviewPageState extends State<RawPreviewPage> {
                 ],
               ),
             const Text(
-              '현상은 카메라가 한다. X-T5 실기기에서 확인하지 않았다',
+              '현상은 연결된 카메라에서 합니다. X-T5 실기기에서 확인되지 않았습니다',
               style: TextStyle(color: AppColors.textMuted),
             ),
           ],
@@ -190,7 +190,7 @@ class _RawPreviewPageState extends State<RawPreviewPage> {
               key: ValueKey('recipe-$key'),
               value: selected,
               isExpanded: true,
-              hint: const Text('레시피 고르기'),
+              hint: const Text('레시피 선택'),
               onChanged: busy
                   ? null
                   : (id) => setState(() => _recipes[key] = id),
@@ -216,7 +216,7 @@ class _RawPreviewPageState extends State<RawPreviewPage> {
         Text(key.toUpperCase(), style: AppType.label),
         const SizedBox(height: AppSpacing.sm),
         if (jpeg == null)
-          const _Placeholder('아직 없음')
+          const _Placeholder('결과 없음')
         else
           Semantics(
             container: true,
@@ -229,7 +229,7 @@ class _RawPreviewPageState extends State<RawPreviewPage> {
                 jpeg,
                 cacheWidth: _previewWidth,
                 fit: BoxFit.contain,
-                errorBuilder: (_, _, _) => const _Placeholder('이미지를 열지 못했다'),
+                errorBuilder: (_, _, _) => const _Placeholder('이미지를 열 수 없습니다'),
               ),
             ),
           ),

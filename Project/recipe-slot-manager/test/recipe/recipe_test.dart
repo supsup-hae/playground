@@ -88,11 +88,11 @@ void main() {
       ]);
     });
 
-    test('대상에 값이 없는 필드는 바꾸지 않는 것으로 보고, 현재 값을 모르면 "모름"', () {
+    test('대상에 값이 없는 필드는 바꾸지 않는 것으로 보고, 현재 값을 모르면 "알 수 없음"', () {
       final changes = diffValues({'color': 2}, {'highlight': 0});
 
       expect(changes.map((c) => (c.field.id, c.before, c.after)), [
-        ('highlight', '모름', '0'),
+        ('highlight', '알 수 없음', '0'),
       ]);
     });
   });

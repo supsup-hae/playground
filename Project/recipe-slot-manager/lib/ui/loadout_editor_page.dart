@@ -49,7 +49,7 @@ class _LoadoutEditorPageState extends State<LoadoutEditorPage> {
     final recipes = widget.library.recipes;
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isNew ? '새 묶음' : '묶음 편집'),
+        title: Text(widget.isNew ? '새 세트' : '세트 편집'),
         actions: [
           if (!widget.isNew)
             IconButton(
@@ -88,7 +88,7 @@ class _LoadoutEditorPageState extends State<LoadoutEditorPage> {
                       items: [
                         const DropdownMenuItem(
                           value: null,
-                          child: Text('그대로 (비움)'),
+                          child: Text('변경 없음 (비움)'),
                         ),
                         for (final recipe in recipes)
                           DropdownMenuItem(

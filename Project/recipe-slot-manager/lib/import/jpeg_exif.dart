@@ -18,7 +18,7 @@ const _typeSizes = {
   10: 8,
 };
 
-const _broken = ImportException('파일이 잘렸거나 EXIF 정보가 깨졌다');
+const _broken = ImportException('파일이 잘렸거나 EXIF 정보가 손상되었습니다');
 
 /// [view] 의 [ifdAt] 에 있는 IFD 를 읽는다. 값 위치는 [base] 를 더한 [view] 안의 위치다.
 Map<int, IfdEntry> readIfd(
@@ -109,7 +109,7 @@ typedef Exif = ({
 /// APP1 은 파일 앞 64 KiB 안에 있으므로 파일 전체가 필요하지 않다.
 Exif readExif(Uint8List jpeg) {
   if (jpeg.length < 4 || jpeg[0] != 0xFF || jpeg[1] != 0xD8) {
-    throw const ImportException('JPEG 파일이 아니다');
+    throw const ImportException('JPEG 파일이 아닙니다');
   }
   var at = 2;
   while (at + 4 <= jpeg.length && jpeg[at] == 0xFF) {
@@ -125,16 +125,16 @@ Exif readExif(Uint8List jpeg) {
     }
     at = end;
   }
-  throw const ImportException('사진에 EXIF 정보가 없다');
+  throw const ImportException('사진에 EXIF 정보가 없습니다');
 }
 
 /// JPEG 앞부분에서 MakerNote(0x927C) 바이트를 꺼낸다.
 Uint8List readMakerNote(Uint8List jpeg) {
   final Exif(:tiff, :exif) = readExif(jpeg);
-  if (exif == null) throw const ImportException('사진에 EXIF 정보가 없다');
+  if (exif == null) throw const ImportException('사진에 EXIF 정보가 없습니다');
   final makerNote = exif[0x927C];
   if (makerNote == null) {
-    throw const ImportException('사진에 제조사 정보(MakerNote)가 없다');
+    throw const ImportException('사진에 제조사 정보(MakerNote)가 없습니다');
   }
   return Uint8List.sublistView(
     tiff,

@@ -13,8 +13,8 @@ import 'package:recipe_slot_manager/ui/slots_page.dart';
 /// 화면 목적지. 넓은 창의 레일과 좁은 화면의 아래 탭이 같은 목록을 쓴다.
 const _destinations = [
   (Icons.tune, '레시피'),
-  (Icons.view_week_outlined, '묶음'),
-  (Icons.table_chart_outlined, '카메라 슬롯'),
+  (Icons.view_week_outlined, '세트'),
+  (Icons.table_chart_outlined, '사용자 설정'),
   (Icons.photo_filter_outlined, 'RAW 미리보기'),
   (Icons.palette_outlined, '디자인'),
 ];
@@ -142,7 +142,7 @@ class CameraBar extends StatelessWidget {
             const SizedBox(width: AppSpacing.sm),
             Flexible(
               child: Text(
-                session.model ?? '카메라 없음',
+                session.model ?? '카메라 연결 안 됨',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

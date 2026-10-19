@@ -136,7 +136,7 @@ void main() {
       expect(jpeg.sublist(0, 2), [0xFF, 0xD8]);
       expect(
         developer.camera.log.entries.map((e) => e.$2),
-        contains(startsWith('현상 결과를 카메라에서 지우지 못했다')),
+        contains(startsWith('현상 결과 삭제 실패')),
       );
     });
 

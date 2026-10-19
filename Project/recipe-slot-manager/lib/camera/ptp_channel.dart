@@ -11,7 +11,7 @@ Future<T> guardPtpChannel<T>(Future<T> Function() call) async {
   } on PlatformException catch (e) {
     throw PtpTransportException(e.message ?? e.code);
   } on MissingPluginException {
-    throw const PtpTransportException('이 플랫폼에는 카메라 연결 기능이 없다');
+    throw const PtpTransportException('이 기기에서는 카메라 연결을 지원하지 않음');
   } on FormatException catch (e) {
     throw PtpTransportException(e.message);
   }

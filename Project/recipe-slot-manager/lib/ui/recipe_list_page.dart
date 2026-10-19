@@ -77,7 +77,7 @@ class RecipeListPage extends StatelessWidget {
             ),
             Expanded(
               child: recipes.isEmpty
-                  ? const Center(child: Text('레시피가 없다'))
+                  ? const Center(child: Text('레시피가 없습니다'))
                   : ListView(
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppSpacing.lg,
@@ -103,7 +103,7 @@ class RecipeListPage extends StatelessWidget {
   String _summary(Recipe recipe) => [
     switch (recipe.values['filmSimulation']) {
       final code? => fieldById['filmSimulation']!.display(code),
-      null => '필름 시뮬레이션 유지',
+      null => '필름 시뮬레이션: 카메라 설정 유지',
     },
     ...recipe.tags.map((t) => '#$t'),
   ].join('  ');

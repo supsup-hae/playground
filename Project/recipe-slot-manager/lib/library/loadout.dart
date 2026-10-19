@@ -11,7 +11,7 @@ final class Loadout {
     this.deletedAt,
   }) : slots = List.unmodifiable(slots) {
     if (slots.length != FujiProp.slotCount) {
-      throw ArgumentError.value(slots, 'slots', '슬롯은 7칸이어야 한다');
+      throw ArgumentError.value(slots, 'slots', 'C1–C7 7칸이 아님');
     }
   }
 
@@ -35,11 +35,11 @@ final class Loadout {
         deletedAt: switch (json['deletedAt']) {
           null => null,
           final String text => parseUtc(text),
-          final other => throw FormatException('deletedAt 형식이 맞지 않다', other),
+          final other => throw FormatException('deletedAt 형식 오류', other),
         },
       );
     }
-    throw FormatException('묶음 형식이 맞지 않다', json);
+    throw FormatException('세트 형식 오류', json);
   }
 
   final String id;

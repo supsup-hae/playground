@@ -36,7 +36,7 @@ class LoadoutListPage extends StatelessWidget {
               padding: const EdgeInsets.all(AppSpacing.lg),
               child: Row(
                 children: [
-                  Text('묶음 ${loadouts.length}개', style: AppType.label),
+                  Text('세트 ${loadouts.length}개', style: AppType.label),
                   const Spacer(),
                   FilledButton.icon(
                     onPressed: () => _push(
@@ -45,7 +45,7 @@ class LoadoutListPage extends StatelessWidget {
                         library: library,
                         loadout: Loadout(
                           id: newRecipeId(),
-                          name: '새 묶음',
+                          name: '새 세트',
                           slots: List.filled(FujiProp.slotCount, null),
                           updatedAt: DateTime.now().toUtc(),
                         ),
@@ -53,14 +53,14 @@ class LoadoutListPage extends StatelessWidget {
                       ),
                     ),
                     icon: const Icon(Icons.add),
-                    label: const Text('새 묶음'),
+                    label: const Text('새 세트'),
                   ),
                 ],
               ),
             ),
             Expanded(
               child: loadouts.isEmpty
-                  ? const Center(child: Text('묶음이 없다'))
+                  ? const Center(child: Text('세트가 없습니다'))
                   : ListView(
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppSpacing.lg,
@@ -129,7 +129,7 @@ class _LoadoutCard extends StatelessWidget {
                 ),
                 OutlinedButton(onPressed: onEdit, child: const Text('편집')),
                 const SizedBox(width: AppSpacing.sm),
-                FilledButton(onPressed: onApply, child: const Text('비교·쓰기')),
+                FilledButton(onPressed: onApply, child: const Text('비교·저장')),
               ],
             ),
             const SizedBox(height: AppSpacing.md),
@@ -144,7 +144,7 @@ class _LoadoutCard extends StatelessWidget {
                       SlotBadge(slot: i + 1, active: recipes[i] != null),
                       const SizedBox(width: AppSpacing.xs),
                       Text(
-                        recipes[i]?.name ?? '그대로',
+                        recipes[i]?.name ?? '변경 없음',
                         style: TextStyle(
                           color: recipes[i] == null
                               ? AppColors.textMuted

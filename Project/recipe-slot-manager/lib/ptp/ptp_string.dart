@@ -12,7 +12,7 @@ Uint8List encodePtpString(String value) {
     throw ArgumentError.value(
       value,
       'value',
-      'PTP 문자열은 $maxPtpStringLength글자까지다',
+      'PTP 문자열 $maxPtpStringLength자 초과',
     );
   }
   final bytes = ByteData(1 + 2 * (units.length + 1))
@@ -27,7 +27,7 @@ String decodePtpString(Uint8List bytes) {
   if (bytes.isEmpty || bytes[0] == 0) return '';
   final count = bytes[0];
   if (bytes.length < 1 + 2 * count) {
-    throw FormatException('PTP 문자열 글자 수 $count 가 ${bytes.length}바이트를 넘는다');
+    throw FormatException('PTP 문자열 글자 수 $count: ${bytes.length}바이트 초과');
   }
   final data = ByteData.sublistView(bytes);
   return String.fromCharCodes([

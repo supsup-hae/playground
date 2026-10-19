@@ -3,9 +3,9 @@ import 'package:recipe_slot_manager/recipe/recipe_fields.dart';
 
 /// 레시피를 가져온 곳.
 enum ImportSource {
-  cameraSlot('카메라 슬롯'),
+  cameraSlot('카메라 사용자 설정'),
   exif('EXIF'),
-  text('이미지 글자');
+  text('이미지 텍스트');
 
   const ImportSource(this.label);
 
@@ -53,7 +53,7 @@ ImportedRecipe importedRecipe({
       updatedAt: DateTime.now().toUtc(),
     ),
     note:
-        '${source.label}에서 ${accepted.length}개 항목을 읽었다. '
-        '빈칸은 카메라 값을 유지한다',
+        '${source.label}에서 ${accepted.length}개 항목을 가져왔습니다. '
+        '빈칸은 카메라 설정을 유지합니다',
   );
 }

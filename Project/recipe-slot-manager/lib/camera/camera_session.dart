@@ -70,7 +70,7 @@ class CameraSession extends ChangeNotifier {
       log.add('C${result.slot} $warning');
     }
     for (final code in result.mismatched) {
-      log.add('C${result.slot} ${propLabel(code)}: 다시 읽은 값이 다르다');
+      log.add('C${result.slot} ${propLabel(code)}: 저장 확인 불일치');
     }
   }
 }

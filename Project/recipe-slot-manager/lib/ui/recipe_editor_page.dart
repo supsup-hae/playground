@@ -143,7 +143,7 @@ class _FieldEditor extends StatelessWidget {
       return Row(
         children: [
           Expanded(child: Text(field.label)),
-          const Text('카메라 값 유지', style: TextStyle(color: AppColors.textMuted)),
+          const Text('카메라 설정 유지', style: TextStyle(color: AppColors.textMuted)),
           const SizedBox(width: AppSpacing.sm),
           TextButton(
             key: ValueKey('set-${field.id}'),
@@ -184,7 +184,7 @@ class _FieldEditor extends StatelessWidget {
       children: [
         Expanded(child: editor),
         IconButton(
-          tooltip: '카메라 값 유지',
+          tooltip: '카메라 설정 유지',
           onPressed: () => onChanged(null),
           icon: const Icon(Icons.close, size: 18),
         ),

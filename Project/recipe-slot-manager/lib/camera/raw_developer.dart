@@ -74,7 +74,7 @@ class RawDeveloper {
       ),
     );
     if (profile.data.isEmpty) {
-      throw const RawDevelopException('카메라가 RAF 를 받지 않았다 (현상 설정이 비어 있다)');
+      throw const RawDevelopException('카메라가 RAF 를 받지 않음 (현상 설정 비어 있음)');
     }
     _baseProfile = profile.data;
     _rafSession = camera.sessionNumber;
@@ -88,7 +88,7 @@ class RawDeveloper {
   Future<Uint8List> develop(Map<String, double> values) async {
     final base = _baseProfile;
     if (base == null || !rafLoaded) {
-      throw const RawDevelopException('RAF 를 먼저 보낼 것');
+      throw const RawDevelopException('RAF 를 먼저 보내세요');
     }
     final watch = Stopwatch()..start();
     await _expectOk(
@@ -122,11 +122,11 @@ class RawDeveloper {
     try {
       await camera.command(PtpOp.deleteObject, params: [handle]);
     } on PtpTransportException catch (e) {
-      camera.log.add('현상 결과를 카메라에서 지우지 못했다: ${e.message}');
+      camera.log.add('현상 결과 삭제 실패: ${e.message}');
     }
     final jpeg = result.data;
     if (jpeg.length < 2 || jpeg[0] != 0xFF || jpeg[1] != 0xD8) {
-      throw const RawDevelopException('현상 결과가 JPEG 이 아니다');
+      throw const RawDevelopException('현상 결과가 JPEG 아님');
     }
     camera.log.add('현상: ${watch.elapsedMilliseconds}ms');
     return jpeg;
@@ -142,9 +142,7 @@ class RawDeveloper {
         if (seen.add(handle) && await _isJpeg(handle)) return handle;
       }
       if (watch.elapsed >= pollTimeout) {
-        throw RawDevelopException(
-          '현상 결과가 ${pollTimeout.inSeconds}초 안에 나오지 않았다',
-        );
+        throw RawDevelopException('현상 결과 대기 시간 초과 (${pollTimeout.inSeconds}초)');
       }
       await Future<void>.delayed(pollInterval);
     }
