@@ -5,7 +5,18 @@ import 'package:recipe_slot_manager/import/recipe_import.dart';
 /// IFD 항목 하나. [offset] 은 값 바이트의 위치다 (4바이트 이하면 항목 안의 값 자리).
 typedef IfdEntry = ({int type, int count, int offset});
 
-const _typeSizes = {1: 1, 2: 1, 3: 2, 4: 4, 6: 1, 7: 1, 8: 2, 9: 4};
+const _typeSizes = {
+  1: 1,
+  2: 1,
+  3: 2,
+  4: 4,
+  5: 8,
+  6: 1,
+  7: 1,
+  8: 2,
+  9: 4,
+  10: 8,
+};
 
 const _broken = ImportException('파일이 잘렸거나 EXIF 정보가 깨졌다');
 
@@ -49,9 +60,54 @@ List<int> ifdValues(ByteData view, IfdEntry entry, Endian endian) => [
     },
 ];
 
-/// JPEG 앞부분에서 APP1 Exif 를 찾아 MakerNote(0x927C) 바이트를 꺼낸다.
+/// RATIONAL(5)·SRATIONAL(10) 값. 분모가 0 인 값은 null. 다른 형식이면 깨진 파일로 본다.
+List<double?> ifdRationals(ByteData view, IfdEntry entry, Endian endian) {
+  if (entry.type != 5 && entry.type != 10) throw _broken;
+  return [
+    for (var i = 0; i < entry.count; i++)
+      _rational(view, entry.offset + 8 * i, endian, signed: entry.type == 10),
+  ];
+}
+
+double? _rational(
+  ByteData view,
+  int at,
+  Endian endian, {
+  required bool signed,
+}) {
+  final numerator = signed
+      ? view.getInt32(at, endian)
+      : view.getUint32(at, endian);
+  final denominator = signed
+      ? view.getInt32(at + 4, endian)
+      : view.getUint32(at + 4, endian);
+  return denominator == 0 ? null : numerator / denominator;
+}
+
+/// ASCII 값. 첫 NUL 앞까지 읽고 앞뒤 공백을 지운다.
+String ifdString(Uint8List tiff, IfdEntry entry) {
+  final bytes = Uint8List.sublistView(
+    tiff,
+    entry.offset,
+    entry.offset + entry.count,
+  );
+  final end = bytes.indexOf(0);
+  return String.fromCharCodes(end < 0 ? bytes : bytes.sublist(0, end)).trim();
+}
+
+/// APP1 Exif 의 TIFF 바이트와 IFD0·Exif·GPS IFD. 값 위치는 모두 [tiff] 기준이다.
+typedef Exif = ({
+  Uint8List tiff,
+  ByteData view,
+  Endian endian,
+  Map<int, IfdEntry> ifd0,
+  Map<int, IfdEntry>? exif,
+  Map<int, IfdEntry>? gps,
+});
+
+/// JPEG 앞부분에서 APP1 Exif 를 찾아 해석한다.
 /// APP1 은 파일 앞 64 KiB 안에 있으므로 파일 전체가 필요하지 않다.
-Uint8List readMakerNote(Uint8List jpeg) {
+Exif readExif(Uint8List jpeg) {
   if (jpeg.length < 4 || jpeg[0] != 0xFF || jpeg[1] != 0xD8) {
     throw const ImportException('JPEG 파일이 아니다');
   }
@@ -65,36 +121,17 @@ Uint8List readMakerNote(Uint8List jpeg) {
     if (length < 2 || end > jpeg.length) throw _broken;
     final body = Uint8List.sublistView(jpeg, at + 4, end);
     if (marker == 0xE1 && _isExif(body)) {
-      return _makerNoteIn(Uint8List.sublistView(body, 6));
+      return _exifIn(Uint8List.sublistView(body, 6));
     }
     at = end;
   }
   throw const ImportException('사진에 EXIF 정보가 없다');
 }
 
-bool _isExif(Uint8List body) =>
-    body.length >= 6 &&
-    String.fromCharCodes(body.sublist(0, 4)) == 'Exif' &&
-    body[4] == 0 &&
-    body[5] == 0;
-
-Uint8List _makerNoteIn(Uint8List tiff) {
-  if (tiff.length < 8) throw _broken;
-  final view = ByteData.sublistView(tiff);
-  final endian = switch (String.fromCharCodes(tiff.sublist(0, 2))) {
-    'II' => Endian.little,
-    'MM' => Endian.big,
-    _ => throw _broken,
-  };
-  final ifd0 = readIfd(view, view.getUint32(4, endian), endian);
-  final exifPointer = ifd0[0x8769];
-  if (exifPointer == null) throw const ImportException('사진에 EXIF 정보가 없다');
-  if (exifPointer.count != 1) throw _broken;
-  final exif = readIfd(
-    view,
-    ifdValues(view, exifPointer, endian).first,
-    endian,
-  );
+/// JPEG 앞부분에서 MakerNote(0x927C) 바이트를 꺼낸다.
+Uint8List readMakerNote(Uint8List jpeg) {
+  final Exif(:tiff, :exif) = readExif(jpeg);
+  if (exif == null) throw const ImportException('사진에 EXIF 정보가 없다');
   final makerNote = exif[0x927C];
   if (makerNote == null) {
     throw const ImportException('사진에 제조사 정보(MakerNote)가 없다');
@@ -103,5 +140,37 @@ Uint8List _makerNoteIn(Uint8List tiff) {
     tiff,
     makerNote.offset,
     makerNote.offset + makerNote.count,
+  );
+}
+
+bool _isExif(Uint8List body) =>
+    body.length >= 6 &&
+    String.fromCharCodes(body.sublist(0, 4)) == 'Exif' &&
+    body[4] == 0 &&
+    body[5] == 0;
+
+Exif _exifIn(Uint8List tiff) {
+  if (tiff.length < 8) throw _broken;
+  final view = ByteData.sublistView(tiff);
+  final endian = switch (String.fromCharCodes(tiff.sublist(0, 2))) {
+    'II' => Endian.little,
+    'MM' => Endian.big,
+    _ => throw _broken,
+  };
+  final ifd0 = readIfd(view, view.getUint32(4, endian), endian);
+  Map<int, IfdEntry>? subIfd(int pointerTag) {
+    final pointer = ifd0[pointerTag];
+    if (pointer == null) return null;
+    if (pointer.count != 1) throw _broken;
+    return readIfd(view, ifdValues(view, pointer, endian).first, endian);
+  }
+
+  return (
+    tiff: tiff,
+    view: view,
+    endian: endian,
+    ifd0: ifd0,
+    exif: subIfd(0x8769),
+    gps: subIfd(0x8825),
   );
 }
