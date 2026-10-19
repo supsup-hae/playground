@@ -33,7 +33,7 @@ void main() {
     await pumpPage(tester);
 
     await tapAndWait(tester, find.text('연결'));
-    await tapAndWait(tester, find.text('7슬롯 읽기'));
+    await tapAndWait(tester, find.text('C1–C7 불러오기'));
 
     expect(find.text('X-T5'), findsOneWidget);
     expect(find.text('Recipe 5'), findsOneWidget);
@@ -42,7 +42,7 @@ void main() {
   testWidgets('값을 바꿔 쓰면 백업을 먼저 남기고 카메라에 쓴다', (tester) async {
     await pumpPage(tester);
     await tapAndWait(tester, find.text('연결'));
-    await tapAndWait(tester, find.text('7슬롯 읽기'));
+    await tapAndWait(tester, find.text('C1–C7 불러오기'));
 
     await tester.tap(find.byKey(const ValueKey('cell-7-D19D')));
     await tester.pumpAndSettle();
@@ -50,7 +50,7 @@ void main() {
     await tester.tap(find.text('확인'));
     await tester.pumpAndSettle();
 
-    await tapAndWait(tester, find.text('C7 쓰기'));
+    await tapAndWait(tester, find.text('C7에 저장'));
 
     expect(transport.slots[7]![highlight], u16(15));
     final backups = await tester.runAsync(store.list);
@@ -60,7 +60,7 @@ void main() {
   Future<void> connectAndRead(WidgetTester tester) async {
     await pumpPage(tester);
     await tapAndWait(tester, find.text('연결'));
-    await tapAndWait(tester, find.text('7슬롯 읽기'));
+    await tapAndWait(tester, find.text('C1–C7 불러오기'));
   }
 
   Future<void> editCell(
@@ -83,7 +83,7 @@ void main() {
     transport.slots[7]![shadow] = u16(77);
 
     await editCell(tester, 7, 'D19D', '15');
-    await tapAndWait(tester, find.text('C7 쓰기'));
+    await tapAndWait(tester, find.text('C7에 저장'));
 
     final files = (await tester.runAsync(store.list))!;
     final backup = (await tester.runAsync(() => store.load(files.single)))!;
@@ -98,7 +98,7 @@ void main() {
     await editCell(tester, 7, 'D19D', '70000');
 
     expect(find.textContaining('범위'), findsOneWidget);
-    expect(find.text('C7 쓰기'), findsNothing);
+    expect(find.text('C7에 저장'), findsNothing);
   });
 
   testWidgets('한 슬롯을 써도 다른 슬롯의 수정은 남는다', (tester) async {
@@ -106,10 +106,10 @@ void main() {
     await editCell(tester, 6, 'D19D', '10');
     await editCell(tester, 7, 'D19D', '15');
 
-    await tapAndWait(tester, find.text('C7 쓰기'));
+    await tapAndWait(tester, find.text('C7에 저장'));
 
-    expect(find.text('C6 쓰기'), findsOneWidget);
-    expect(find.text('C7 쓰기'), findsNothing);
+    expect(find.text('C6에 저장'), findsOneWidget);
+    expect(find.text('C7에 저장'), findsNothing);
   });
 
   Future<void> restoreFrom(WidgetTester tester, String content) async {

@@ -49,7 +49,7 @@ class FujiCamera {
       for (var slot = 1; slot <= FujiProp.slotCount; slot++)
         await _readSlot(slot),
     ];
-    _logTiming('7슬롯 읽기', timing);
+    _logTiming('C1–C7 불러오기', timing);
     return slots;
   });
 
@@ -72,7 +72,7 @@ class FujiCamera {
       for (final target in targets)
         await _writeSlot(target, bySlot[target.slot]),
     ];
-    _logTiming('7슬롯 쓰기', timing);
+    _logTiming('C1–C7 저장', timing);
     return results;
   });
 
@@ -102,7 +102,7 @@ class FujiCamera {
     final reply = await _send(PtpOp.getDevicePropValue, code);
     if (reply.isOk && reply.data.isNotEmpty) return reply.data;
     log.add(
-      'C$slot ${propLabel(code)} 읽기 실패 (0x${reply.code.toRadixString(16)})',
+      'C$slot ${propLabel(code)} 불러오기 실패 (0x${reply.code.toRadixString(16)})',
     );
     return null;
   }
@@ -148,7 +148,7 @@ class FujiCamera {
         if (!listEquals(await _getProp(key), values[key])) key,
     ];
 
-    final elapsed = _logTiming('C${target.slot} 쓰기 ${written.length}개', timing);
+    final elapsed = _logTiming('C${target.slot} 저장 ${written.length}개', timing);
     return SlotWriteResult(
       slot: target.slot,
       written: written,
@@ -168,7 +168,7 @@ class FujiCamera {
       if (original != null && _slotChanged) {
         final code = await _setProp(FujiProp.presetSlot, original);
         if (code != PtpResponse.ok) {
-          log.add('원래 슬롯 복귀 실패 (0x${code.toRadixString(16)})');
+          log.add('원래 C 번호 복귀 실패 (0x${code.toRadixString(16)})');
         }
       }
     }

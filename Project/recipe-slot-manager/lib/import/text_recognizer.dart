@@ -11,8 +11,8 @@ Future<List<String>> recognizeText(Uint8List image) async {
     return await ocrChannel.invokeListMethod<String>('recognize', image) ??
         const [];
   } on PlatformException catch (e) {
-    throw ImportException('글자를 읽지 못했다: ${e.message ?? e.code}');
+    throw ImportException('텍스트를 인식하지 못했습니다: ${e.message ?? e.code}');
   } on MissingPluginException {
-    throw const ImportException('이 플랫폼에는 글자 인식 기능이 없다');
+    throw const ImportException('이 기기에서는 텍스트 인식을 지원하지 않습니다');
   }
 }

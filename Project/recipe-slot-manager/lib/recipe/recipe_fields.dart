@@ -186,7 +186,7 @@ const recipeFields = <RecipeField>[
   ),
   ScaleField(
     id: 'monoWarmCool',
-    label: '모노 웜·쿨',
+    label: '모노크롬 색상 WC',
     prop: 0xD193,
     min: -18,
     max: 18,
@@ -195,7 +195,7 @@ const recipeFields = <RecipeField>[
   ),
   ScaleField(
     id: 'monoMagentaGreen',
-    label: '모노 마젠타·그린',
+    label: '모노크롬 색상 MG',
     prop: 0xD194,
     min: -18,
     max: 18,
@@ -204,25 +204,25 @@ const recipeFields = <RecipeField>[
   ),
   ChoiceField(
     id: 'grain',
-    label: '그레인',
+    label: '그레인 효과',
     prop: 0xD195,
     choices: [(1, '끔'), (2, '약·소'), (3, '강·소'), (4, '약·대'), (5, '강·대')],
   ),
   ChoiceField(
     id: 'colorChrome',
-    label: '컬러 크롬',
+    label: '컬러 크롬 효과',
     prop: 0xD196,
     choices: _effects,
   ),
   ChoiceField(
     id: 'colorChromeFxBlue',
-    label: '컬러 크롬 FX 블루',
+    label: '컬러크롬 FX 블루',
     prop: 0xD197,
     choices: _effects,
   ),
   ChoiceField(
     id: 'smoothSkin',
-    label: '스무스 스킨',
+    label: '피부 보정 효과',
     prop: 0xD198,
     choices: _effects,
   ),
@@ -285,7 +285,7 @@ const recipeFields = <RecipeField>[
   ),
   ScaleField(
     id: 'shadow',
-    label: '섀도',
+    label: '섀도우',
     prop: 0xD19E,
     min: -2,
     max: 4,
@@ -294,7 +294,7 @@ const recipeFields = <RecipeField>[
   ),
   ScaleField(
     id: 'color',
-    label: '컬러',
+    label: '색농도',
     prop: 0xD19F,
     min: -4,
     max: 4,
@@ -312,7 +312,7 @@ const recipeFields = <RecipeField>[
   ),
   TableField(
     id: 'noiseReduction',
-    label: '고감도 NR',
+    label: '고감도 노이즈 감소',
     prop: 0xD1A1,
     table: {
       0x8000: -4,
@@ -328,7 +328,7 @@ const recipeFields = <RecipeField>[
   ),
   ScaleField(
     id: 'clarity',
-    label: '클래리티',
+    label: '선명도',
     prop: 0xD1A2,
     min: -5,
     max: 5,

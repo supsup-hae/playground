@@ -8,7 +8,7 @@ import 'package:recipe_slot_manager/import/recipe_import.dart';
 Map<int, List<int>> readFujiTags(Uint8List makerNote) {
   if (makerNote.length < 12 ||
       String.fromCharCodes(makerNote.sublist(0, 8)) != 'FUJIFILM') {
-    throw const ImportException('후지필름 카메라로 찍은 사진이 아니다');
+    throw const ImportException('후지필름 카메라로 찍은 사진이 아닙니다');
   }
   final view = ByteData.sublistView(makerNote);
   final entries = readIfd(

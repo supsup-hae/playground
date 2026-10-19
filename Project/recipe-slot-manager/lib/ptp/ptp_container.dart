@@ -48,7 +48,7 @@ Uint8List ptpDataContainer(Uint8List command, Uint8List payload) {
   Uint8List bytes,
 ) {
   if (bytes.length < ptpHeaderLength) {
-    throw FormatException('PTP 컨테이너가 ${bytes.length}바이트로 머리말보다 짧다');
+    throw FormatException('PTP 컨테이너 ${bytes.length}바이트: 머리말보다 짧음');
   }
   final view = ByteData.sublistView(bytes);
   return (
@@ -63,7 +63,7 @@ Uint8List ptpDataContainer(Uint8List command, Uint8List payload) {
 int ptpResponseCode(Uint8List response) {
   final header = ptpContainerHeader(response);
   if (header.type != ptpResponseType) {
-    throw FormatException('PTP 응답 컨테이너가 아니다 (타입 ${header.type})');
+    throw FormatException('PTP 응답 컨테이너 아님 (타입 ${header.type})');
   }
   return header.code;
 }

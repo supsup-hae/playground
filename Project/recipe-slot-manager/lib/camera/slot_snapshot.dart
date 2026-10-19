@@ -32,7 +32,7 @@ final class SlotSnapshot {
         },
       );
     }
-    throw FormatException('슬롯 형식이 맞지 않다', json);
+    throw FormatException('사용자 설정 형식 오류', json);
   }
 
   /// 1–7.
@@ -70,14 +70,14 @@ int _propCode(String key) {
   if (code == null ||
       code < FujiProp.presetFirst ||
       code > FujiProp.presetLast) {
-    throw FormatException('레시피 속성 코드가 아니다', key);
+    throw FormatException('레시피 속성 코드 아님', key);
   }
   return code;
 }
 
 Uint8List _fromHex(Object? hex) {
   if (hex is! String || !_hexBytes.hasMatch(hex)) {
-    throw FormatException('속성 값이 짝수 길이 16진수가 아니다', hex);
+    throw FormatException('속성 값이 짝수 길이 16진수 아님', hex);
   }
   return Uint8List.fromList([
     for (var i = 0; i < hex.length; i += 2)

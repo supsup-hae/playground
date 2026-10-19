@@ -38,14 +38,14 @@ class _SlotsPageState extends State<SlotsPage> {
     }
   }
 
-  Future<void> _readAll() => _run('읽기', _reload);
+  Future<void> _readAll() => _run('불러오기', _reload);
 
   Future<void> _reload() async {
     final slots = await _session.camera.readAllSlots();
     if (mounted) setState(() => _slots = slots);
   }
 
-  Future<void> _writeSlot(int slot) => _run('C$slot 쓰기', () async {
+  Future<void> _writeSlot(int slot) => _run('C$slot에 저장', () async {
     final fresh = await _session.backupFromCamera();
     final current = fresh.firstWhere((s) => s.slot == slot);
     final target = current.copyWith(
@@ -73,7 +73,7 @@ class _SlotsPageState extends State<SlotsPage> {
         title: const Text('복원할 백업'),
         children: [
           if (files.isEmpty)
-            const Padding(padding: EdgeInsets.all(16), child: Text('백업이 없다')),
+            const Padding(padding: EdgeInsets.all(16), child: Text('백업이 없습니다')),
           for (final file in files)
             SimpleDialogOption(
               onPressed: () => Navigator.pop(context, file),
@@ -87,7 +87,7 @@ class _SlotsPageState extends State<SlotsPage> {
       final backup = await _session.backups.load(file);
       if (backup.model != _session.model) {
         _session.log.add(
-          '복원 취소: 백업 모델(${backup.model})이 연결된 카메라(${_session.model})와 다르다',
+          '복원 취소: 백업 모델(${backup.model})이 연결된 카메라(${_session.model})와 다릅니다',
         );
         return;
       }
@@ -128,8 +128,8 @@ class _SlotsPageState extends State<SlotsPage> {
                 ? Center(
                     child: Text(
                       _session.connected
-                          ? '7슬롯을 읽는다'
-                          : '위에서 카메라를 연결한 뒤 7슬롯을 읽는다',
+                          ? 'C1–C7을 불러오세요'
+                          : '위에서 카메라를 연결한 뒤 C1–C7을 불러오세요',
                     ),
                   )
                 : _table(),
@@ -149,7 +149,7 @@ class _SlotsPageState extends State<SlotsPage> {
         children: [
           OutlinedButton(
             onPressed: enabled ? _readAll : null,
-            child: const Text('7슬롯 읽기'),
+            child: const Text('C1–C7 불러오기'),
           ),
           OutlinedButton(
             onPressed: enabled ? _restore : null,
@@ -160,7 +160,7 @@ class _SlotsPageState extends State<SlotsPage> {
           ))
             FilledButton.tonal(
               onPressed: enabled ? () => _writeSlot(slot.slot) : null,
-              child: Text('C${slot.slot} 쓰기'),
+              child: Text('C${slot.slot}에 저장'),
             ),
         ],
       ),
@@ -242,7 +242,7 @@ class _ValueDialogState extends State<_ValueDialog> {
     final value = int.tryParse(_text.trim());
     final bytes = value == null ? null : encodePropValue(value, widget.length);
     if (bytes == null) {
-      setState(() => _error = '범위 $_range 의 정수를 입력한다');
+      setState(() => _error = '$_range 범위의 정수를 입력하세요');
       return;
     }
     Navigator.pop(context, bytes);

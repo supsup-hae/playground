@@ -63,9 +63,9 @@ void main() {
   testWidgets('카메라가 연결되지 않았으면 RAF 를 보내지 않고 알린다', (tester) async {
     await pumpPreview(tester);
 
-    await TestApp.tapAndWait(tester, find.text('RAF 고르기'));
+    await TestApp.tapAndWait(tester, find.text('RAF 선택'));
 
-    expect(find.text('카메라를 먼저 연결할 것'), findsOneWidget);
+    expect(find.text('카메라를 먼저 연결하세요'), findsOneWidget);
     expect(app.transport.raf, isNull);
   });
 
@@ -74,7 +74,7 @@ void main() {
     await tester.runAsync(app.session.connect);
     await pumpPreview(tester);
 
-    await TestApp.tapAndWait(tester, find.text('RAF 고르기'));
+    await TestApp.tapAndWait(tester, find.text('RAF 선택'));
     expect(find.textContaining('DSCF0042'), findsOneWidget);
     expect(app.transport.raf, hasLength(1024));
 
@@ -96,7 +96,7 @@ void main() {
     await tester.runAsync(app.session.connect);
     await pumpPreview(tester, size: const Size(412, 915));
 
-    await TestApp.tapAndWait(tester, find.text('RAF 고르기'));
+    await TestApp.tapAndWait(tester, find.text('RAF 선택'));
     await pick(tester, 'recipe-a', 'Summer');
     await pick(tester, 'recipe-b', 'Night');
     await TestApp.tapAndWait(tester, find.text('현상'));
@@ -116,7 +116,7 @@ void main() {
     final button = find.widgetWithText(FilledButton, '현상');
     expect(tester.widget<FilledButton>(button).onPressed, isNull);
 
-    await TestApp.tapAndWait(tester, find.text('RAF 고르기'));
+    await TestApp.tapAndWait(tester, find.text('RAF 선택'));
     expect(tester.widget<FilledButton>(button).onPressed, isNull);
 
     await pick(tester, 'recipe-a', 'Summer');
@@ -129,7 +129,7 @@ void main() {
     app.transport.developResult = (_) => Uint8List.fromList([1, 2, 3]);
     await pumpPreview(tester);
 
-    await TestApp.tapAndWait(tester, find.text('RAF 고르기'));
+    await TestApp.tapAndWait(tester, find.text('RAF 선택'));
     await pick(tester, 'recipe-a', 'Summer');
     await TestApp.tapAndWait(tester, find.text('현상'));
 
@@ -145,7 +145,7 @@ void main() {
     await addRecipes(tester);
     await tester.runAsync(app.session.connect);
     await pumpPreview(tester);
-    await TestApp.tapAndWait(tester, find.text('RAF 고르기'));
+    await TestApp.tapAndWait(tester, find.text('RAF 선택'));
     await pick(tester, 'recipe-a', 'Summer');
     await TestApp.tapAndWait(tester, find.text('현상'));
     await tester.pumpAndSettle();
@@ -168,6 +168,6 @@ void main() {
   testWidgets('보관함에 레시피가 없으면 만들거나 가져오라고 알린다', (tester) async {
     await pumpPreview(tester);
 
-    expect(find.textContaining('보관함에 레시피가 없다'), findsOneWidget);
+    expect(find.textContaining('보관함에 레시피가 없습니다'), findsOneWidget);
   });
 }

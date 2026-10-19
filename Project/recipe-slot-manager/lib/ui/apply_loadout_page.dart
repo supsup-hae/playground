@@ -49,13 +49,13 @@ class _ApplyLoadoutPageState extends State<ApplyLoadoutPage> {
     if (_session.connected) await _read();
   }
 
-  Future<void> _read() => _session.run('읽기', () async {
+  Future<void> _read() => _session.run('불러오기', () async {
     final slots = await _session.camera.readAllSlots();
     if (mounted) setState(() => _current = slots);
   });
 
   Future<void> _write() async {
-    final failure = await _session.run('7슬롯 쓰기', () async {
+    final failure = await _session.run('C1–C7에 저장', () async {
       final fresh = await _session.backupFromCamera();
       final recipes = widget.library.slotRecipes(widget.loadout);
       final targets = [
@@ -88,7 +88,7 @@ class _ApplyLoadoutPageState extends State<ApplyLoadoutPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('${widget.loadout.name} 비교·쓰기')),
+      appBar: AppBar(title: Text('${widget.loadout.name} 비교·저장')),
       body: Column(
         children: [
           CameraBar(session: _session),
@@ -111,7 +111,7 @@ class _ApplyLoadoutPageState extends State<ApplyLoadoutPage> {
       return Center(
         child: FilledButton(
           onPressed: _session.busy ? null : _connectAndRead,
-          child: const Text('카메라 연결하고 읽기'),
+          child: const Text('카메라 연결 후 불러오기'),
         ),
       );
     }
@@ -119,7 +119,7 @@ class _ApplyLoadoutPageState extends State<ApplyLoadoutPage> {
       return Center(
         child: _session.busy
             ? const CircularProgressIndicator()
-            : OutlinedButton(onPressed: _read, child: const Text('다시 읽기')),
+            : OutlinedButton(onPressed: _read, child: const Text('다시 불러오기')),
       );
     }
     final recipes = widget.library.slotRecipes(widget.loadout);
@@ -148,7 +148,7 @@ class _ApplyLoadoutPageState extends State<ApplyLoadoutPage> {
         children: [
           const Expanded(
             child: Text(
-              '실기기 미확인: 쓰기 전에 7슬롯을 자동으로 백업한다',
+              '실기기 미확인: 저장하기 전에 C1–C7을 자동으로 백업합니다',
               style: TextStyle(color: AppColors.textMuted),
             ),
           ),
@@ -165,7 +165,7 @@ class _ApplyLoadoutPageState extends State<ApplyLoadoutPage> {
             ),
           FilledButton(
             onPressed: _session.busy ? null : _write,
-            child: const Text('7슬롯 쓰기'),
+            child: const Text('C1–C7에 저장'),
           ),
         ],
       ),
@@ -202,7 +202,7 @@ class _SlotCard extends StatelessWidget {
                 Expanded(child: Text(current.name)),
                 if (recipe == null)
                   const Text(
-                    '그대로',
+                    '변경 없음',
                     style: TextStyle(color: AppColors.textMuted),
                   ),
               ],
@@ -218,7 +218,7 @@ class _SlotCard extends StatelessWidget {
                 ),
               if (!renamed && changes.isEmpty)
                 const Text(
-                  '바뀌는 값 없음',
+                  '변경되는 값 없음',
                   style: TextStyle(color: AppColors.textMuted),
                 ),
             ],

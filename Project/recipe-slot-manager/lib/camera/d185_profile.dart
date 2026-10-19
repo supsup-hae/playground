@@ -31,14 +31,14 @@ const d185Slots = {
 /// 형식: 첫 u16 이 매개변수 개수 n, 마지막 n × 4 바이트가 int32(리틀 엔디언) 배열.
 Uint8List patchD185(Uint8List base, Map<String, double> values) {
   if (base.length < 2) {
-    throw FormatException('D185 프로필이 ${base.length}바이트로 너무 짧다');
+    throw FormatException('D185 프로필 ${base.length}바이트: 너무 짧음');
   }
   final patched = Uint8List.fromList(base);
   final view = ByteData.sublistView(patched);
   final count = view.getUint16(0, Endian.little);
   final start = patched.length - count * 4;
   if (start < 2) {
-    throw FormatException('D185 프로필 길이 ${base.length} 가 매개변수 $count개보다 짧다');
+    throw FormatException('D185 프로필 길이 ${base.length}: 매개변수 $count개보다 짧음');
   }
   for (final MapEntry(:key, :value) in values.entries) {
     final slot = d185Slots[key];

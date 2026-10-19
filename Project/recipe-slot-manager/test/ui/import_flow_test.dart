@@ -53,9 +53,9 @@ void main() {
   testWidgets('카메라가 연결되지 않았으면 연결부터 하라고 알린다', (tester) async {
     await pumpList(tester);
 
-    await choose(tester, '카메라 슬롯');
+    await choose(tester, '카메라 사용자 설정');
 
-    expect(find.text('카메라를 먼저 연결할 것'), findsOneWidget);
+    expect(find.text('카메라를 먼저 연결하세요'), findsOneWidget);
   });
 
   testWidgets('다른 카메라 작업 중이면 끝난 뒤 하라고 알리고 카메라에 명령을 보내지 않는다', (tester) async {
@@ -65,9 +65,9 @@ void main() {
     app.transport.sent.clear();
     await pumpList(tester);
 
-    await choose(tester, '카메라 슬롯');
+    await choose(tester, '카메라 사용자 설정');
 
-    expect(find.text('카메라 작업이 끝난 뒤 다시 할 것'), findsOneWidget);
+    expect(find.text('카메라 작업이 끝난 뒤 다시 시도하세요'), findsOneWidget);
     expect(app.transport.sent, isEmpty);
     running.complete();
     await TestApp.settle(tester);
@@ -78,7 +78,7 @@ void main() {
     app.transport.failure = const PtpTransportException('USB 응답 시간 초과');
     await pumpList(tester);
 
-    await choose(tester, '카메라 슬롯');
+    await choose(tester, '카메라 사용자 설정');
 
     expect(find.text('USB 응답 시간 초과'), findsOneWidget);
   });
@@ -87,11 +87,11 @@ void main() {
     await tester.runAsync(app.session.connect);
     await pumpList(tester);
 
-    await choose(tester, '카메라 슬롯');
+    await choose(tester, '카메라 사용자 설정');
     await tester.tapAt(const Offset(5, 5));
     await tester.pumpAndSettle();
 
-    expect(find.text('가져올 슬롯'), findsNothing);
+    expect(find.text('가져올 사용자 설정'), findsNothing);
     expect(find.text('저장'), findsNothing);
   });
 
@@ -107,11 +107,11 @@ void main() {
     await tester.runAsync(app.session.connect);
     await pumpList(tester);
 
-    await choose(tester, '카메라 슬롯');
+    await choose(tester, '카메라 사용자 설정');
     await TestApp.tapAndWait(tester, find.text('C3  Recipe 3'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('카메라 슬롯에서'), findsOneWidget);
+    expect(find.textContaining('카메라 사용자 설정에서'), findsOneWidget);
     await save(tester);
     expect(app.library.recipes.single.name, 'Recipe 3');
   });
@@ -129,9 +129,12 @@ void main() {
     );
     await pumpList(tester);
 
-    await choose(tester, '사진 (EXIF)');
+    await choose(tester, '사진 세부정보 (EXIF)');
 
-    expect(find.text('EXIF에서 3개 항목을 읽었다. 빈칸은 카메라 값을 유지한다'), findsOneWidget);
+    expect(
+      find.text('EXIF에서 3개 항목을 가져왔습니다. 빈칸은 카메라 설정을 유지합니다'),
+      findsOneWidget,
+    );
     await save(tester);
     final saved = app.library.recipes.single;
     expect(saved.name, 'DSCF0001');
@@ -145,9 +148,9 @@ void main() {
     );
     await pumpList(tester);
 
-    await choose(tester, '사진 (EXIF)');
+    await choose(tester, '사진 세부정보 (EXIF)');
 
-    expect(find.text('JPEG 파일이 아니다'), findsOneWidget);
+    expect(find.text('JPEG 파일이 아닙니다'), findsOneWidget);
     expect(find.text('저장'), findsNothing);
   });
 
@@ -156,9 +159,9 @@ void main() {
     recognized = ['Film Simulation: Eterna', 'Shadow: -1'];
     await pumpList(tester);
 
-    await choose(tester, '이미지 글자 (OCR)');
+    await choose(tester, '이미지 텍스트 (OCR)');
 
-    expect(find.textContaining('이미지 글자에서 2개 항목'), findsOneWidget);
+    expect(find.textContaining('이미지 텍스트에서 2개 항목'), findsOneWidget);
     await save(tester);
     expect(app.library.recipes.single.values, {
       'filmSimulation': 0x10,
@@ -171,15 +174,15 @@ void main() {
     recognized = ['고양이 사진'];
     await pumpList(tester);
 
-    await choose(tester, '이미지 글자 (OCR)');
+    await choose(tester, '이미지 텍스트 (OCR)');
 
-    expect(find.text('이미지에서 레시피 항목을 찾지 못했다'), findsOneWidget);
+    expect(find.text('이미지에서 레시피 항목을 찾지 못했습니다'), findsOneWidget);
   });
 
   testWidgets('파일을 고르지 않으면 아무 일도 없다', (tester) async {
     await pumpList(tester);
 
-    await choose(tester, '사진 (EXIF)');
+    await choose(tester, '사진 세부정보 (EXIF)');
 
     expect(find.text('저장'), findsNothing);
     expect(find.byType(SnackBar), findsNothing);

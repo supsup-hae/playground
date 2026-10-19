@@ -54,7 +54,7 @@ class SlotBackupStore {
     }) {
       final snapshots = [for (final slot in slots) SlotSnapshot.fromJson(slot)];
       if (snapshots.map((s) => s.slot).toSet().length != snapshots.length) {
-        throw FormatException('같은 슬롯이 두 번 있다', file.path);
+        throw FormatException('같은 C 번호 중복', file.path);
       }
       return SlotBackup(
         model: model,
@@ -62,7 +62,7 @@ class SlotBackupStore {
         slots: snapshots,
       );
     }
-    throw FormatException('백업 형식이 맞지 않다', file.path);
+    throw FormatException('백업 형식 오류', file.path);
   }
 
   static String _stamp(DateTime t) {

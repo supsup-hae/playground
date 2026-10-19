@@ -245,7 +245,7 @@ void main() {
       await camera.writeSlots(current, current: current);
 
       final messages = camera.log.entries.map((e) => e.$2);
-      expect(messages, contains(startsWith('7슬롯 쓰기')));
+      expect(messages, contains(startsWith('C1–C7 저장')));
     });
   });
 

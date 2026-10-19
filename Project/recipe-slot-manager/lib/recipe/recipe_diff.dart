@@ -24,7 +24,7 @@ List<FieldChange> diffValues(
         if (isApplicable(field, effective) && current[field.id] != after)
           FieldChange(field, switch (current[field.id]) {
             final before? => field.display(before),
-            null => '모름',
+            null => '알 수 없음',
           }, field.display(after)),
   ];
 }

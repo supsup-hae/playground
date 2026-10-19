@@ -83,8 +83,8 @@ class SyncService extends ChangeNotifier {
         'lastSyncAt': startedAt.toIso8601String(),
       });
       log.add(
-        '동기화: 받음 ${changes.recipes.length + changes.loadouts.length}, '
-        '바뀜 $merged, 올림 ${upRecipes.length + upLoadouts.length}, '
+        '동기화: 다운로드 ${changes.recipes.length + changes.loadouts.length}, '
+        '병합 $merged, 업로드 ${upRecipes.length + upLoadouts.length}, '
         '건너뜀 ${recipes.skipped + loadouts.skipped}',
       );
       return true;

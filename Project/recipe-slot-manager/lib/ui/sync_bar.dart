@@ -17,7 +17,7 @@ class SyncBar extends StatelessWidget {
     final auth = this.auth;
     if (sync == null || auth == null) {
       return const Tooltip(
-        message: '--dart-define-from-file=supabase.json 으로 실행하면 동기화한다',
+        message: '--dart-define-from-file=supabase.json 으로 실행하면 보관함이 동기화됩니다',
         child: TextButton(onPressed: null, child: Text('동기화 설정 없음')),
       );
     }
@@ -42,7 +42,7 @@ class SyncBar extends StatelessWidget {
             icon: const Icon(Icons.sync, size: 18),
             label: Text(switch (sync.lastSyncAt) {
               final at? =>
-                '동기화 ${at.toLocal().toIso8601String().substring(11, 16)}',
+                '동기화됨 ${at.toLocal().toIso8601String().substring(11, 16)}',
               null => '동기화',
             }),
           ),

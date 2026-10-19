@@ -76,7 +76,7 @@ class _DesignGalleryPageState extends State<DesignGalleryPage> {
         ]),
         _section('노브', [
           KnobSelector<String>(
-            label: '그레인',
+            label: '그레인 효과',
             options: const [
               ('off', '끔'),
               ('weak-small', '약·소'),
@@ -88,7 +88,7 @@ class _DesignGalleryPageState extends State<DesignGalleryPage> {
             onChanged: (v) => setState(() => _grain = v),
           ),
         ]),
-        _section('슬롯', [
+        _section('사용자 설정', [
           Wrap(
             spacing: AppSpacing.sm,
             children: [
@@ -104,13 +104,13 @@ class _DesignGalleryPageState extends State<DesignGalleryPage> {
             after: 'Nostalgic Neg.',
           ),
           ChangeRow(label: '하이라이트', before: '-1', after: '+0.5'),
-          ChangeRow(label: '컬러', before: '+2', after: '+2'),
+          ChangeRow(label: '색농도', before: '+2', after: '+2'),
         ]),
         _section('버튼', [
           Wrap(
             spacing: AppSpacing.sm,
             children: [
-              FilledButton(onPressed: () {}, child: const Text('7슬롯 쓰기')),
+              FilledButton(onPressed: () {}, child: const Text('C1–C7에 저장')),
               OutlinedButton(onPressed: () {}, child: const Text('비교')),
               const OutlinedButton(onPressed: null, child: Text('비활성')),
             ],

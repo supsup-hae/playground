@@ -67,14 +67,14 @@ class ImportMenu extends StatelessWidget {
 
   Future<ImportedRecipe?> _fromCamera(BuildContext context) async {
     if (!session.connected) {
-      throw const ImportException('카메라를 먼저 연결할 것');
+      throw const ImportException('카메라를 먼저 연결하세요');
     }
     // 다른 작업이 슬롯을 바꾸는 중에 읽으면 그 작업이 엉뚱한 슬롯에 쓸 수 있다.
     if (session.busy) {
-      throw const ImportException('카메라 작업이 끝난 뒤 다시 할 것');
+      throw const ImportException('카메라 작업이 끝난 뒤 다시 시도하세요');
     }
     var slots = const <SlotSnapshot>[];
-    final failure = await session.run('7슬롯 읽기', () async {
+    final failure = await session.run('C1–C7 불러오기', () async {
       slots = await session.camera.readAllSlots();
     });
     if (failure != null) throw ImportException(failure);
@@ -82,7 +82,7 @@ class ImportMenu extends StatelessWidget {
     final slot = await showDialog<SlotSnapshot>(
       context: context,
       builder: (context) => SimpleDialog(
-        title: const Text('가져올 슬롯'),
+        title: const Text('가져올 사용자 설정'),
         children: [
           for (final slot in slots)
             SimpleDialogOption(
@@ -115,7 +115,7 @@ class ImportMenu extends StatelessWidget {
     if (file == null) return null;
     final values = parseRecipeText(await tools.recognizeText(file.bytes));
     if (values.isEmpty) {
-      throw const ImportException('이미지에서 레시피 항목을 찾지 못했다');
+      throw const ImportException('이미지에서 레시피 항목을 찾지 못했습니다');
     }
     return importedRecipe(
       name: file.name,
@@ -129,9 +129,12 @@ class ImportMenu extends StatelessWidget {
     return PopupMenuButton<ImportSource>(
       onSelected: (source) => _import(context, source),
       itemBuilder: (_) => const [
-        PopupMenuItem(value: ImportSource.cameraSlot, child: Text('카메라 슬롯')),
-        PopupMenuItem(value: ImportSource.exif, child: Text('사진 (EXIF)')),
-        PopupMenuItem(value: ImportSource.text, child: Text('이미지 글자 (OCR)')),
+        PopupMenuItem(
+          value: ImportSource.cameraSlot,
+          child: Text('카메라 사용자 설정'),
+        ),
+        PopupMenuItem(value: ImportSource.exif, child: Text('사진 세부정보 (EXIF)')),
+        PopupMenuItem(value: ImportSource.text, child: Text('이미지 텍스트 (OCR)')),
       ],
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: kMinInteractiveDimension),

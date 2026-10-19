@@ -21,7 +21,7 @@ class _SignInPageState extends State<SignInPage> {
   Future<void> _submit({required bool signUp}) async {
     final email = _email.trim();
     if (email.isEmpty || _password.isEmpty) {
-      setState(() => _message = '이메일과 비밀번호를 입력한다');
+      setState(() => _message = '이메일과 비밀번호를 입력하세요');
       return;
     }
     setState(() {
@@ -39,12 +39,12 @@ class _SignInPageState extends State<SignInPage> {
       if (response.session != null) {
         Navigator.of(context).pop(true);
       } else {
-        setState(() => _message = '확인 메일을 보냈다. 메일의 링크를 누른 뒤 로그인한다');
+        setState(() => _message = '확인 메일을 보냈습니다. 메일의 링크를 누른 뒤 로그인하세요');
       }
     } on AuthException catch (e) {
       if (mounted) setState(() => _message = e.message);
     } on Exception catch (e) {
-      if (mounted) setState(() => _message = '서버에 닿지 못했다: $e');
+      if (mounted) setState(() => _message = '서버에 연결하지 못했습니다: $e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -83,7 +83,7 @@ class _SignInPageState extends State<SignInPage> {
               const SizedBox(height: AppSpacing.sm),
               OutlinedButton(
                 onPressed: _busy ? null : () => _submit(signUp: true),
-                child: const Text('가입'),
+                child: const Text('계정 만들기'),
               ),
               if (_message case final message?)
                 Padding(

@@ -162,12 +162,12 @@ class LibraryStore extends ChangeNotifier {
           return [for (final row in rows) parse(row)];
         }
       }
-      throw FormatException('$key 파일 형식이 맞지 않다', file.path);
+      throw FormatException('$key 파일 형식 오류', file.path);
     } on FormatException catch (e) {
       final stamp = _clock().toUtc().toIso8601String().replaceAll(':', '-');
       final moved = await file.rename('${file.path}.corrupt-$stamp');
       _loadErrors.add(
-        '${p.basename(file.path)} 를 읽지 못해 ${p.basename(moved.path)} 로 옮겼다: ${e.message}',
+        '${p.basename(file.path)} 읽기 실패, ${p.basename(moved.path)} 로 옮김: ${e.message}',
       );
       return [];
     }

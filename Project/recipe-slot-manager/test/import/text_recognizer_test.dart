@@ -41,7 +41,7 @@ void main() {
         isA<ImportException>().having(
           (e) => e.message,
           'message',
-          '글자를 읽지 못했다: 이미지를 열지 못했다',
+          '텍스트를 인식하지 못했습니다: 이미지를 열지 못했다',
         ),
       ),
     );

@@ -32,7 +32,7 @@ void main() {
 
         expect(find.byType(NavigationBar), findsOneWidget);
         expect(find.byType(NavigationRail), findsNothing);
-        for (final label in ['묶음', '카메라 슬롯', 'RAW 미리보기', '디자인', '레시피']) {
+        for (final label in ['세트', '사용자 설정', 'RAW 미리보기', '디자인', '레시피']) {
           await tester.tap(find.text(label).last);
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull, reason: label);
@@ -45,9 +45,9 @@ void main() {
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull, reason: '디자인 끝까지');
 
-        await tester.tap(find.text('카메라 슬롯').last);
+        await tester.tap(find.text('사용자 설정').last);
         await tester.pumpAndSettle();
-        await TestApp.tapAndWait(tester, find.text('7슬롯 읽기'));
+        await TestApp.tapAndWait(tester, find.text('C1–C7 불러오기'));
         expect(tester.takeException(), isNull, reason: '7슬롯 표');
       });
 
@@ -73,9 +73,9 @@ void main() {
 
         await tester.pageBack();
         await tester.pumpAndSettle();
-        await tester.tap(find.text('묶음').last);
+        await tester.tap(find.text('세트').last);
         await tester.pumpAndSettle();
-        await tester.tap(find.text('새 묶음'));
+        await tester.tap(find.text('새 세트'));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull, reason: '묶음 편집');
       });
@@ -112,7 +112,7 @@ void main() {
         await TestApp.settle(tester);
 
         expect(tester.takeException(), isNull);
-        expect(find.text('7슬롯 쓰기'), findsOneWidget);
+        expect(find.text('C1–C7에 저장'), findsOneWidget);
       });
     });
   }
@@ -134,7 +134,7 @@ void main() {
   testWidgets('창 크기가 배치 기준을 넘나들어도 화면 상태가 남는다', (tester) async {
     await tester.runAsync(app.session.connect);
     await app.pumpShell(tester, index: 2);
-    await TestApp.tapAndWait(tester, find.text('7슬롯 읽기'));
+    await TestApp.tapAndWait(tester, find.text('C1–C7 불러오기'));
     expect(find.text('Recipe 7'), findsOneWidget);
 
     TestApp.useWindow(tester, phoneSizes['S26 울트라 세로']!);
