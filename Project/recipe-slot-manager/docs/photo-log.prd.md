@@ -121,8 +121,8 @@ When 예전 여행 사진의 장소와 설정을 떠올리고 싶으면, I want 
 
 | # | Phase | Description | Status | Parallel | Depends | PRP Plan |
 |---|-------|-------------|--------|----------|---------|----------|
-| 1 | 촬영 정보 읽기 | GPS IFD(RATIONAL), 촬영 시각·시간대, 필름 시뮬레이션 → 사진 정보 | in-progress | - | - | [plans/photo-log-1-photo-info.plan.md](plans/photo-log-1-photo-info.plan.md) |
-| 2 | 사진 색인 | Mac 폴더·Android 앨범 고르기, 권한, 바뀐 사진만 읽기, 기기 저장 | pending | with 3 | 1 | - |
+| 1 | 촬영 정보 읽기 | GPS IFD(RATIONAL), 촬영 시각·시간대, 필름 시뮬레이션 → 사진 정보 | complete (위치 든 실제 사진 미확인) | - | - | [plans/photo-log-1-photo-info.plan.md](plans/photo-log-1-photo-info.plan.md) |
+| 2 | 사진 색인 | Mac 폴더·Android 앨범 고르기, 권한, 바뀐 사진만 읽기, 기기 저장 | in-progress | with 3 | 1 | [plans/photo-log-2-photo-index.plan.md](plans/photo-log-2-photo-index.plan.md) |
 | 3 | 장소 이름 | 주소 변환 채널(macOS·Android), 좌표 캐시 | pending | with 2 | 1 | - |
 | 4 | 찾기 화면 | 사진 탭: 필터 목록, 위치 없음 묶음, 지도, 사진 상세 | pending | - | 2, 3 | - |
 | 5 | 위치 기록 | 묶음 쓰기 때 휴대폰 위치 기록, 기록 목록, 지도 겹쳐 보기 | pending | - | 3, 4 | - |
