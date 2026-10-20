@@ -8,6 +8,7 @@ import 'package:recipe_slot_manager/library/library_store.dart';
 import 'package:recipe_slot_manager/photo/photo_info.dart';
 import 'package:recipe_slot_manager/photo/photo_query.dart';
 import 'package:recipe_slot_manager/recipe/recipe_fields.dart';
+import 'package:recipe_slot_manager/ui/formats.dart';
 import 'package:recipe_slot_manager/ui/photos_setup.dart';
 import 'package:recipe_slot_manager/ui/recipe_editor_page.dart';
 
@@ -158,20 +159,3 @@ class _NoImage extends StatelessWidget {
     child: Center(child: Text('사진을 열 수 없습니다')),
   );
 }
-
-/// `2025-10-12 15:26 (+09:00)`. 시각이 없으면 null.
-String? formatShotAt(PhotoInfo info) {
-  final t = info.shotAt;
-  if (t == null) return null;
-  String two(int v) => v.toString().padLeft(2, '0');
-  final offset = switch (info.utcOffset) {
-    final o? =>
-      ' (${o.isNegative ? '-' : '+'}${two(o.inMinutes.abs() ~/ 60)}:${two(o.inMinutes.abs() % 60)})',
-    null => '',
-  };
-  return '${formatDate(t)} ${two(t.hour)}:${two(t.minute)}$offset';
-}
-
-/// `2025-10-12`.
-String formatDate(DateTime t) =>
-    '${t.year}-${t.month.toString().padLeft(2, '0')}-${t.day.toString().padLeft(2, '0')}';

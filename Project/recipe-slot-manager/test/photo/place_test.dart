@@ -61,4 +61,11 @@ void main() {
       expect(() => Place.fromJson(null), throwsFormatException);
     });
   });
+
+  test('좌표 표시: 소수 넷째 자리, 쉼표와 띄어쓰기', () {
+    expect(
+      formatGeoPoint((latitude: -33.86882, longitude: 151.2093)),
+      '-33.8688, 151.2093',
+    );
+  });
 }

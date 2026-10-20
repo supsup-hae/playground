@@ -80,7 +80,7 @@ void main() {
         expect(tester.takeException(), isNull);
       });
 
-      testWidgets('레시피 편집과 묶음 편집이 넘치지 않는다', (tester) async {
+      testWidgets('레시피 편집과 세트 편집이 넘치지 않는다', (tester) async {
         await app.pumpShell(tester, size: size);
         await tester.tap(find.text('새 레시피'));
         await tester.pumpAndSettle();
@@ -92,7 +92,7 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(find.text('새 세트'));
         await tester.pumpAndSettle();
-        expect(tester.takeException(), isNull, reason: '묶음 편집');
+        expect(tester.takeException(), isNull, reason: '세트 편집');
       });
 
       testWidgets('비교·쓰기 화면이 넘치지 않는다', (tester) async {

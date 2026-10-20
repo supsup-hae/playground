@@ -87,6 +87,35 @@ class _PhotoMapViewState extends State<PhotoMapView> {
     super.dispose();
   }
 
+  /// 사진 묶음 점(원)과 세트 저장 기록 점(사각).
+  List<Marker> _markers(
+    List<MapCluster<PhotoEntry>> clusters,
+    List<({PlaceLogEntry entry, LatLng point})> logs,
+  ) => [
+    for (final cluster in clusters)
+      Marker(
+        point: LatLng(cluster.center.latitude, cluster.center.longitude),
+        width: 44,
+        height: 44,
+        child: _ClusterDot(
+          key: ValueKey('cluster-${cluster.items.length}'),
+          count: cluster.items.length,
+          onTap: () => _openCluster(cluster.items),
+        ),
+      ),
+    for (final (:entry, :point) in logs)
+      Marker(
+        point: point,
+        width: 36,
+        height: 36,
+        child: _LogDot(
+          key: ValueKey('log-${entry.log.id}'),
+          name: entry.log.loadoutName,
+          onTap: () => _openLog(entry),
+        ),
+      ),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final located = _located;
@@ -129,62 +158,9 @@ class _PhotoMapViewState extends State<PhotoMapView> {
             urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
             userAgentPackageName: 'dev.supsuphae.recipe_slot_manager',
           ),
-        MarkerLayer(
-          markers: [
-            for (final cluster in clusters)
-              Marker(
-                point: LatLng(
-                  cluster.center.latitude,
-                  cluster.center.longitude,
-                ),
-                width: 44,
-                height: 44,
-                child: _ClusterDot(
-                  key: ValueKey('cluster-${cluster.items.length}'),
-                  count: cluster.items.length,
-                  onTap: () => _openCluster(cluster.items),
-                ),
-              ),
-            for (final (:entry, :point) in logs)
-              Marker(
-                point: point,
-                width: 36,
-                height: 36,
-                child: _LogDot(
-                  key: ValueKey('log-${entry.log.id}'),
-                  name: entry.log.loadoutName,
-                  onTap: () => _openLog(entry),
-                ),
-              ),
-          ],
-        ),
-        if (points.isEmpty)
-          const Center(
-            child: Card(
-              child: Padding(
-                padding: EdgeInsets.all(AppSpacing.lg),
-                child: Text(
-                  '위치가 있는 사진이 없습니다.\n'
-                  'XApp 위치 정보 동기화를 켜고 찍은 사진에 위치가 들어갑니다.',
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
-          ),
-        // OSM 저작권 표시. 좁은 화면에서도 줄을 바꿔 들어가도록 직접 그린다.
-        const Align(
-          alignment: Alignment.bottomRight,
-          child: ColoredBox(
-            color: Color(0xCCFFFFFF),
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              child: Text(
-                '© OpenStreetMap contributors',
-                style: TextStyle(color: Color(0xFF333333), fontSize: 11),
-              ),
-            ),
-          ),
-        ),
+        MarkerLayer(markers: _markers(clusters, logs)),
+        if (points.isEmpty) const _NoLocationHint(),
+        const _OsmAttribution(),
       ],
     );
   }
@@ -247,6 +223,44 @@ class _LogDot extends StatelessWidget {
             size: 18,
             color: AppColors.text,
           ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _NoLocationHint extends StatelessWidget {
+  const _NoLocationHint();
+
+  @override
+  Widget build(BuildContext context) => const Center(
+    child: Card(
+      child: Padding(
+        padding: EdgeInsets.all(AppSpacing.lg),
+        child: Text(
+          '위치가 있는 사진이 없습니다.\n'
+          'XApp 위치 정보 동기화를 켜고 찍은 사진에 위치가 들어갑니다.',
+          textAlign: TextAlign.center,
+        ),
+      ),
+    ),
+  );
+}
+
+/// OSM 저작권 표시. 좁은 화면에서도 줄을 바꿔 들어가도록 직접 그린다.
+class _OsmAttribution extends StatelessWidget {
+  const _OsmAttribution();
+
+  @override
+  Widget build(BuildContext context) => const Align(
+    alignment: Alignment.bottomRight,
+    child: ColoredBox(
+      color: Color(0xCCFFFFFF),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        child: Text(
+          '© OpenStreetMap contributors',
+          style: TextStyle(color: Color(0xFF333333), fontSize: 11),
         ),
       ),
     ),

@@ -10,7 +10,7 @@ import 'package:recipe_slot_manager/recipe/recipe.dart';
 import 'package:recipe_slot_manager/ui/apply_loadout_page.dart';
 import 'package:recipe_slot_manager/ui/loadout_editor_page.dart';
 
-/// 상황별 묶음 목록. 편집하거나, 카메라와 비교한 뒤 7슬롯에 쓴다.
+/// 상황별 세트 목록. 편집하거나, 카메라와 비교한 뒤 7슬롯에 쓴다.
 class LoadoutListPage extends StatelessWidget {
   const LoadoutListPage({
     super.key,

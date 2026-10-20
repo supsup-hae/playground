@@ -40,8 +40,8 @@ We'll know we're right when "1년 전 일본에서 어떤 골목에서 어떤 �
 ## Open Questions
 
 - [ ] XApp 위치 동기화를 켜고 찍은 사진에 GPS 가 실제로 들어오는가, XApp 으로 받을 때 지워지지 않는가 - 사용자가 지금 시험할 수 없다. 가짜 EXIF 로 시험하고 `docs/unverified.md` 에 남긴다
-- [ ] Android 에서 XApp 이 사진을 저장하는 폴더 경로 - 시스템 폴더 선택 창에서 사용자가 고르게 해 경로에 기대지 않는다
-- [ ] 휴대폰과 Mac 에 있는 같은 사진을 무엇으로 판별하나 (촬영 시각 + 초 이하 시각, `ImageUniqueID` 존재 여부) - 1단계에서 표본으로 확인
+- [x] Android 에서 XApp 이 사진을 저장하는 폴더 경로 - 시스템 폴더 선택 창에서 사용자가 고르게 해 경로에 기대지 않는다 (2단계)
+- [x] 휴대폰과 Mac 에 있는 같은 사진을 무엇으로 판별하나 - 기종·촬영 시각·시간대·MakerNote 촬영 번호(`PhotoInfo.key`)로 정했다 (1단계). 촬영 번호가 맞는지는 `docs/unverified.md`
 - [ ] macOS·Android 주소 변환의 호출 제한과 한국어로 받은 일본 주소의 형태 - 3단계에서 좌표 캐시로 호출 수를 줄인다
 - [x] Mac 에서 묶음을 쓸 때도 위치를 기록할지 - 기록은 남기고 위치 칸만 비운다 (5단계 계획 D2)
 
@@ -99,7 +99,7 @@ When 예전 여행 사진의 장소와 설정을 떠올리고 싶으면, I want 
 
 **Architecture Notes**
 - EXIF: `lib/import/jpeg_exif.dart` 의 `readIfd` 로 GPS IFD 를 읽는다. 지금 `_typeSizes` 에 RATIONAL(5)·SRATIONAL(10, 8바이트)이 없어 좌표 값 위치를 잘못 계산하므로 추가한다. 필름 시뮬레이션은 `fuji_makernote.dart` 의 `decodeFujiRecipe` 를 쓴다. 파일 앞 256 KiB 만 읽는다 (APP1 은 64 KiB 안)
-- 폴더 읽기: macOS 는 `file_selector` 의 폴더 고르기와 재귀 탐색. Android 는 시스템 폴더 선택 창으로 폴더를 고르고 그 경로의 사진을 MediaStore 로 찾는다. 원본 EXIF 위치를 받으려고 `ACCESS_MEDIA_LOCATION` 과 `MediaStore.setRequireOriginal` 을 쓴다. `photo_manager` 와 자체 MediaStore 채널 중 하나를 계획 단계에서 정한다
+- 폴더 읽기: macOS 는 `file_selector` 의 폴더 고르기와 재귀 탐색. Android 는 시스템 폴더 선택 창으로 폴더를 고르고 그 경로의 사진을 MediaStore 로 찾는다. 원본 EXIF 위치를 받으려고 `ACCESS_MEDIA_LOCATION` 과 `MediaStore.setRequireOriginal` 을 쓴다. 2단계 계획에서 `photo_manager` 대신 자체 채널(`PhotoChannel.kt`)로 정했다
 - 주소 변환: OCR 채널과 같은 방식의 플랫폼 채널 (`CLGeocoder`, `android.location.Geocoder`). 두 쪽 결과가 같은 항목(나라, 광역, 도시, 동네, 길)을 준다. 좌표를 소수 넷째 자리(약 10 m)로 반올림해 캐시한다
 - 지도: `flutter_map` + OpenStreetMap 타일. macOS·Android 모두 되고 API 키가 필요 없다. OSM 타일 이용 정책에 따라 User-Agent 를 넣는다
 - 색인 저장: 기기 JSON(`writeJsonAtomically`, `SerialQueue`)과 Supabase 테이블. 위치는 개인정보이므로 RLS 로 본인 행만 읽고 쓴다
@@ -125,7 +125,7 @@ When 예전 여행 사진의 장소와 설정을 떠올리고 싶으면, I want 
 | 2 | 사진 색인 | Mac·Android 폴더 고르기(하위 폴더 포함), 자동 색인, 권한, 바뀐 사진만 읽기, 기기 저장 | complete (실기기 미확인) | with 3 | 1 | [plans/photo-log-2-photo-index.plan.md](plans/photo-log-2-photo-index.plan.md) |
 | 3 | 장소 이름 | 주소 변환 채널(macOS·Android), 좌표 캐시 | complete (실기기 미확인) | - | 1 | [plans/photo-log-3-4-places-browse.plan.md](plans/photo-log-3-4-places-browse.plan.md) |
 | 4 | 찾기 화면 | 사진 탭: 목록·지도 전환, 기간·지역·시뮬레이션 필터와 검색, 위치 없음 묶음, 사진 상세 | complete (실기기 미확인) | - | 2, 3 | [plans/photo-log-3-4-places-browse.plan.md](plans/photo-log-3-4-places-browse.plan.md) |
-| 5 | 위치 기록 | 묶음 쓰기 때 휴대폰 위치 기록, 기록 목록, 지도 겹쳐 보기 | in-progress | - | 3, 4 | [plans/photo-log-5-place-log.plan.md](plans/photo-log-5-place-log.plan.md) |
+| 5 | 위치 기록 | 묶음 쓰기 때 휴대폰 위치 기록, 기록 목록, 지도 겹쳐 보기 | complete (실기기 미확인) | - | 3, 4 | [plans/photo-log-5-place-log.plan.md](plans/photo-log-5-place-log.plan.md) |
 | 6 | 동기화 | Supabase 테이블·RLS, 색인·기록 동기화, 같은 사진 합치기 | pending | - | 2, 5 | - |
 
 ### Phase Details
@@ -147,7 +147,7 @@ When 예전 여행 사진의 장소와 설정을 떠올리고 싶으면, I want 
 
 **Phase 4: 찾기 화면**
 - **Goal**: 30초 안에 사진을 찾는다
-- **Scope**: 셸 목적지에 "사진"을 더해 여섯 개(휴대폰 아래 탭에서 넘치지 않는지 확인), 기간·나라·도시·시뮬레이션 필터, 위치 없음 묶음, 지도와 점 묶기, 사진 상세(썸네일, 길 이름, 레시피 값)
+- **Scope**: 셸 목적지에 "사진"을 더한다(휴대폰 아래 탭은 디자인 화면을 빼고 다섯 개), 기간·나라·도시·시뮬레이션 필터, 위치 없음 묶음, 지도와 점 묶기, 사진 상세(썸네일, 길 이름, 레시피 값)
 - **Success signal**: "2025년·일본·Eterna" 로 걸러 지도에서 사진 상세까지 간다. 휴대폰 크기에서 넘침이 없다
 
 **Phase 5: 위치 기록**
@@ -193,7 +193,7 @@ When 예전 여행 사진의 장소와 설정을 떠올리고 싶으면, I want 
 **Technical Context**
 - 재사용: `readIfd`·`ifdValues`·`readMakerNote`(`lib/import/jpeg_exif.dart`), `readFujiTags`·`decodeFujiRecipe`(`lib/import/fuji_makernote.dart`), `pickJpegHead` 의 256 KiB 읽기(`lib/import/file_pick.dart`), OCR 플랫폼 채널 구조, `writeJsonAtomically`·`SerialQueue`, 2단계 동기화
 - X-T5 는 GPS 가 없고, XApp 이 블루투스로 휴대폰 위치를 보내 줄 때만 GPS IFD 에 값이 들어간다
-- 계획 단계에서 확인할 새 의존성: `flutter_map`, Android 사진 접근(`photo_manager` 또는 자체 채널)
+- 들인 의존성: `flutter_map`·`latlong2`(4단계). Android 사진 접근은 자체 채널로 했다
 
 ---
 

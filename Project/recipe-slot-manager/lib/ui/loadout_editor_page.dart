@@ -4,7 +4,7 @@ import 'package:recipe_slot_manager/design/tokens.dart';
 import 'package:recipe_slot_manager/library/library_store.dart';
 import 'package:recipe_slot_manager/library/loadout.dart';
 
-/// 묶음 하나를 편집한다: 이름과, 슬롯 1–7 마다 넣을 레시피(비우면 그대로).
+/// 세트 하나를 편집한다: 이름과, 슬롯 1–7 마다 넣을 레시피(비우면 그대로).
 class LoadoutEditorPage extends StatefulWidget {
   const LoadoutEditorPage({
     super.key,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:recipe_slot_manager/design/tokens.dart';
 import 'package:recipe_slot_manager/photo/photo_query.dart';
-import 'package:recipe_slot_manager/ui/photo_detail_page.dart';
+import 'package:recipe_slot_manager/ui/formats.dart';
 import 'package:recipe_slot_manager/ui/photo_thumbnail.dart';
 
 /// 찾은 사진을 촬영 날짜별로 묶어 썸네일 격자로 보인다. 날짜 줄에는 그날 사진의 도시 이름.

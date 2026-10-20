@@ -50,7 +50,7 @@ void main() {
     expect(find.text('B&W'), findsOneWidget, reason: '목록으로 돌아온다');
   });
 
-  testWidgets('새 묶음에서 C2 에 레시피를 고르고 저장한다', (tester) async {
+  testWidgets('새 세트에서 C2 에 레시피를 고르고 저장한다', (tester) async {
     final kodak = (await tester.runAsync(
       () => app.library.saveRecipe(
         Recipe(

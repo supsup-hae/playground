@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:recipe_slot_manager/design/tokens.dart';
 import 'package:recipe_slot_manager/photo/photo_query.dart';
-import 'package:recipe_slot_manager/ui/photo_detail_page.dart';
+import 'package:recipe_slot_manager/photo/place.dart';
+import 'package:recipe_slot_manager/ui/formats.dart';
 
 /// 세트 저장 기록을 날짜별로 묶어 보인다. [entries] 는 최신순.
 class PlaceLogListView extends StatelessWidget {
@@ -44,10 +45,6 @@ class PlaceLogTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (:log, :place) = entry;
-    final time = log.localTime;
-    final hhmm =
-        '${time.hour.toString().padLeft(2, '0')}:'
-        '${time.minute.toString().padLeft(2, '0')}';
     final location = log.location;
     final accuracy = log.accuracy;
     final where = location == null
@@ -55,9 +52,7 @@ class PlaceLogTile extends StatelessWidget {
         : [
             switch (place) {
               final place? when !place.isEmpty => place.parts.join(' '),
-              _ =>
-                '${location.latitude.toStringAsFixed(4)}, '
-                    '${location.longitude.toStringAsFixed(4)}',
+              _ => formatGeoPoint(location),
             },
             if (accuracy != null) '(약 ${accuracy.round()} m)',
           ].join(' ');
@@ -67,7 +62,7 @@ class PlaceLogTile extends StatelessWidget {
     ].join(' · ');
     return ListTile(
       leading: const Icon(Icons.view_week_outlined),
-      title: Text('$hhmm · ${log.loadoutName}'),
+      title: Text('${formatTime(log.localTime)} · ${log.loadoutName}'),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

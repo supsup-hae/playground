@@ -9,6 +9,11 @@ String _fixed(double value) {
   return text == '-0.0000' ? '0.0000' : text;
 }
 
+/// 화면·로그에 보일 좌표: `35.6587, 139.7005`.
+String formatGeoPoint(GeoPoint location) =>
+    '${location.latitude.toStringAsFixed(4)}, '
+    '${location.longitude.toStringAsFixed(4)}';
+
 /// 좌표의 주소 이름. 기기의 주소 변환이 준 값이며, 칸마다 비어 있을 수 있다.
 /// 모든 칸이 비었으면(바다 등) 이름이 없는 장소다.
 final class Place {

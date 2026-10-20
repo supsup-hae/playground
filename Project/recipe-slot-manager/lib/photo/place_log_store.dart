@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -32,24 +31,18 @@ class PlaceLogStore extends ChangeNotifier {
   /// [loadErrors] 에 남긴 뒤 빈 기록으로 시작한다.
   Future<void> load() async {
     _loadErrors.clear();
-    _logs.clear();
-    if (await _file.exists()) {
-      try {
-        final json = jsonDecode(await _file.readAsString());
-        if (json case {'logs': final List<dynamic> logs}) {
-          _logs.addAll(logs.map(PlaceLog.fromJson));
-        } else {
-          throw FormatException('저장 기록 파일 형식 오류', json);
-        }
-      } on FormatException catch (e) {
-        _logs.clear();
-        final stamp = _clock().toUtc().toIso8601String().replaceAll(':', '-');
-        final moved = await _file.rename('${_file.path}.corrupt-$stamp');
-        _loadErrors.add(
-          'place_logs.json 읽기 실패, ${p.basename(moved.path)} 로 옮김: ${e.message}',
-        );
-      }
-    }
+    final read = await readJsonFile(
+      _file,
+      (json) => switch (json) {
+        {'logs': final List<dynamic> logs} => logs.map(PlaceLog.fromJson),
+        _ => throw FormatException('저장 기록 파일 형식 오류', json),
+      }.toList(),
+      now: _clock(),
+      errors: _loadErrors,
+    );
+    _logs
+      ..clear()
+      ..addAll(read ?? const []);
     notifyListeners();
   }
 

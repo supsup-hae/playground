@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -67,38 +66,35 @@ class PhotoIndexStore extends ChangeNotifier {
   /// [loadErrors] 에 남긴 뒤 빈 색인으로 시작한다.
   Future<void> load() async {
     _loadErrors.clear();
-    _sources.clear();
+    final read = await readJsonFile(
+      _file,
+      _parse,
+      now: _clock(),
+      errors: _loadErrors,
+    );
+    _sources
+      ..clear()
+      ..addAll({
+        for (final source in read?.sources ?? const []) source.id: source,
+      });
     _photos.clear();
-    if (await _file.exists()) {
-      try {
-        _parse(jsonDecode(await _file.readAsString()));
-      } on FormatException catch (e) {
-        _sources.clear();
-        _photos.clear();
-        final stamp = _clock().toUtc().toIso8601String().replaceAll(':', '-');
-        final moved = await _file.rename('${_file.path}.corrupt-$stamp');
-        _loadErrors.add(
-          'photos.json 읽기 실패, ${p.basename(moved.path)} 로 옮김: ${e.message}',
-        );
-      }
+    for (final photo in read?.photos ?? const <IndexedPhoto>[]) {
+      (_photos[photo.sourceId] ??= []).add(photo);
     }
     notifyListeners();
   }
 
-  void _parse(Object? json) {
+  static ({List<PhotoSource> sources, List<IndexedPhoto> photos}) _parse(
+    Object? json,
+  ) {
     if (json case {
       'sources': final List<dynamic> sources,
       'photos': final List<dynamic> photos,
     }) {
-      for (final row in sources) {
-        final source = PhotoSource.fromJson(row);
-        _sources[source.id] = source;
-      }
-      for (final row in photos) {
-        final photo = IndexedPhoto.fromJson(row);
-        (_photos[photo.sourceId] ??= []).add(photo);
-      }
-      return;
+      return (
+        sources: sources.map(PhotoSource.fromJson).toList(),
+        photos: photos.map(IndexedPhoto.fromJson).toList(),
+      );
     }
     throw FormatException('사진 색인 파일 형식 오류', json);
   }
