@@ -1,7 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:recipe_slot_manager/import/jpeg_exif.dart';
-import 'package:recipe_slot_manager/photo/album_reader.dart';
+import 'package:recipe_slot_manager/photo/media_folder_reader.dart';
 import 'package:recipe_slot_manager/photo/photo_source.dart';
 
 void main() {
@@ -10,13 +10,13 @@ void main() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
   late List<MethodCall> calls;
   late Future<Object?> Function(MethodCall call) handler;
-  final reader = AlbumReader();
+  final reader = MediaFolderReader();
 
-  const album = PhotoSource(
+  const folder = PhotoSource(
     id: 's1',
-    kind: PhotoSourceKind.album,
+    kind: PhotoSourceKind.mediaFolder,
     name: 'FUJIFILM XApp',
-    location: '-17',
+    location: 'Pictures/FUJIFILM XApp/',
   );
 
   setUp(() {
@@ -37,17 +37,41 @@ void main() {
     expect((access.images, access.location), (true, false));
   });
 
-  test('앨범 목록', () async {
-    handler = (_) async => [
-      {'id': '-17', 'name': 'FUJIFILM XApp', 'count': 1204},
-    ];
+  test('폴더 선택 창에서 고른 폴더의 경로와 이름', () async {
+    handler = (_) async => {
+      'path': 'Pictures/FUJIFILM XApp/',
+      'name': 'FUJIFILM XApp',
+    };
 
-    final albums = await reader.albums();
+    final picked = await reader.pickFolder();
 
-    expect(albums.single, (id: '-17', name: 'FUJIFILM XApp', count: 1204));
+    expect(calls.single.method, 'pickFolder');
+    expect(picked, (path: 'Pictures/FUJIFILM XApp/', name: 'FUJIFILM XApp'));
   });
 
-  test('앨범의 사진 목록을 출처 위치(버킷 id)로 요청한다', () async {
+  test('폴더 선택을 닫으면 null', () async {
+    handler = (_) async => {};
+
+    expect(await reader.pickFolder(), isNull);
+  });
+
+  test('내부 저장소가 아닌 폴더를 고르면 이유를 알린다', () async {
+    handler = (_) async =>
+        throw PlatformException(code: 'volume', message: 'SD card');
+
+    await expectLater(
+      reader.pickFolder(),
+      throwsA(
+        isA<PhotoSourceException>().having(
+          (e) => e.message,
+          'message',
+          '휴대폰 내부 저장소의 폴더만 고를 수 있습니다',
+        ),
+      ),
+    );
+  });
+
+  test('폴더(하위 폴더 포함)의 사진 목록을 출처 경로로 요청한다', () async {
     handler = (_) async => [
       {
         'id': 'content://media/external/images/media/7',
@@ -57,10 +81,10 @@ void main() {
       },
     ];
 
-    final files = await reader.list(album);
+    final files = await reader.list(folder);
 
     expect(calls.single.method, 'photos');
-    expect(calls.single.arguments, '-17');
+    expect(calls.single.arguments, 'Pictures/FUJIFILM XApp/');
     expect(files.single, (
       id: 'content://media/external/images/media/7',
       name: 'DSCF1422.JPG',
@@ -76,7 +100,7 @@ void main() {
     };
     const file = (id: 'content://x/7', name: 'a.jpg', size: 1, modifiedMs: 1);
 
-    final head = await reader.readHead(album, file);
+    final head = await reader.readHead(folder, file);
 
     expect(calls.single.method, 'readHead');
     expect(calls.single.arguments, {
@@ -92,7 +116,7 @@ void main() {
         throw PlatformException(code: 'permission', message: 'denied');
 
     await expectLater(
-      reader.list(album),
+      reader.list(folder),
       throwsA(
         isA<PhotoSourceException>().having(
           (e) => e.message,
@@ -105,9 +129,15 @@ void main() {
 
   test('그 밖의 플랫폼 오류와 채널 없음도 PhotoSourceException', () async {
     handler = (_) async => throw PlatformException(code: 'io', message: 'boom');
-    await expectLater(reader.albums(), throwsA(isA<PhotoSourceException>()));
+    await expectLater(
+      reader.list(folder),
+      throwsA(isA<PhotoSourceException>()),
+    );
 
     messenger.setMockMethodCallHandler(photoChannel, null);
-    await expectLater(reader.albums(), throwsA(isA<PhotoSourceException>()));
+    await expectLater(
+      reader.list(folder),
+      throwsA(isA<PhotoSourceException>()),
+    );
   });
 }

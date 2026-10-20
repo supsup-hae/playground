@@ -67,7 +67,7 @@ class TestApp {
       photoStore,
       readers: {
         PhotoSourceKind.folder: photoReader,
-        PhotoSourceKind.album: photoReader,
+        PhotoSourceKind.mediaFolder: photoReader,
       },
       log: session.log,
     ),

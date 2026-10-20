@@ -84,6 +84,71 @@ void main() {
     expect(find.text('이미 추가한 출처입니다'), findsOneWidget);
   });
 
+  testWidgets('이미 추가한 폴더의 상위·하위 폴더는 추가하지 않는다', (tester) async {
+    for (final (existing, picked) in [
+      ('Pictures/FUJIFILM XApp/', 'Pictures/FUJIFILM XApp/2026/'),
+      ('Pictures/FUJIFILM XApp/2026/', 'Pictures/'),
+      ('Pictures/', ''),
+    ]) {
+      await tester.runAsync(() async {
+        for (final s in app.photoStore.sources) {
+          await app.photoStore.removeSource(s.id);
+        }
+        await app.photoStore.saveSource(
+          PhotoSource(
+            id: 'old',
+            kind: PhotoSourceKind.mediaFolder,
+            name: 'old',
+            location: existing,
+          ),
+        );
+      });
+      await pumpPhotos(
+        tester,
+        picked: PhotoSource(
+          id: 'new',
+          kind: PhotoSourceKind.mediaFolder,
+          name: 'new',
+          location: picked,
+        ),
+      );
+
+      await TestApp.tapAndWait(tester, find.text('추가'));
+
+      expect(app.photoStore.sources.map((s) => s.id), ['old'], reason: picked);
+      expect(find.text('이미 추가한 폴더와 겹칩니다'), findsOneWidget);
+      ScaffoldMessenger.of(tester.element(find.byType(PhotosPage)))
+          .removeCurrentSnackBar();
+      await tester.pumpAndSettle();
+    }
+  });
+
+  testWidgets('이름이 겹칠 뿐인 옆 폴더는 추가한다', (tester) async {
+    await tester.runAsync(
+      () => app.photoStore.saveSource(
+        const PhotoSource(
+          id: 'old',
+          kind: PhotoSourceKind.folder,
+          name: 'X-T5',
+          location: '/photos/X-T5',
+        ),
+      ),
+    );
+    await pumpPhotos(
+      tester,
+      picked: const PhotoSource(
+        id: 'new',
+        kind: PhotoSourceKind.folder,
+        name: 'X-T5 old',
+        location: '/photos/X-T5 old',
+      ),
+    );
+
+    await TestApp.tapAndWait(tester, find.text('추가'));
+
+    expect(app.photoStore.sources, hasLength(2));
+  });
+
   testWidgets('출처를 빼면 확인한 뒤 그 출처의 색인을 지운다', (tester) async {
     app.photoReader.put('a.jpg');
     await pumpPhotos(tester);

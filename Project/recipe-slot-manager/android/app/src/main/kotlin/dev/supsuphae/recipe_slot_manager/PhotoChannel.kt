@@ -2,11 +2,14 @@ package dev.supsuphae.recipe_slot_manager
 
 import android.Manifest
 import android.app.Activity
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
 import android.os.Handler
 import android.os.Looper
+import android.provider.DocumentsContract
 import android.provider.MediaStore
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -16,22 +19,27 @@ import java.util.concurrent.Executors
  * Dart `album_reader.dart` 의 요청을 MediaStore 로 처리한다. JPEG 만 다룬다.
  *
  * - `requestAccess`: 사진 읽기·사진 위치 권한을 요청하고 `{images, location}` 을 돌려준다
- * - `albums`: JPEG 가 있는 버킷 `[{id, name, count}]`
- * - `photos(bucketId)`: `[{id: content URI, name, size, modified(ms)}]`
+ * - `pickFolder`: 시스템 폴더 선택 창. 내부 저장소 상대 경로 `{path: "Pictures/X/", name}`, 닫으면 `{}`.
+ *   다른 저장소(SD 카드 등)를 고르면 `volume` 오류
+ * - `photos(path)`: 그 경로와 하위 폴더의 JPEG `[{id: content URI, name, size, modified(ms)}]`
  * - `readHead({id, length})`: 앞 `length` 바이트와 `locationRedacted`. 위치 권한이 있으면 원본을 연다
  *
- * 쿼리와 읽기는 작업 스레드에서 하고, 결과는 메인 스레드로 돌려준다.
+ * 폴더는 고르기만 하고 사진은 MediaStore 로 연다. 위치 권한이 있을 때 위치가 든 원본을 받는
+ * 방법이 MediaStore `setRequireOriginal` 이기 때문이다. 쿼리와 읽기는 작업 스레드에서 하고,
+ * 결과는 메인 스레드로 돌려준다.
  */
 class PhotoChannel(private val activity: Activity) : MethodChannel.MethodCallHandler {
     companion object {
         const val CHANNEL = "recipe_slot_manager/photos"
         private const val REQUEST_CODE = 4021
+        private const val FOLDER_REQUEST_CODE = 4022
         private const val JPEG = "image/jpeg"
     }
 
     private val worker = Executors.newSingleThreadExecutor()
     private val main = Handler(Looper.getMainLooper())
     private var pendingAccess: MethodChannel.Result? = null
+    private var pendingFolder: MethodChannel.Result? = null
 
     private val imagePermission =
         if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_IMAGES
@@ -40,11 +48,11 @@ class PhotoChannel(private val activity: Activity) : MethodChannel.MethodCallHan
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             "requestAccess" -> requestAccess(result)
-            "albums" -> background(result) { albums() }
+            "pickFolder" -> pickFolder(result)
             "photos" -> {
-                val bucket = call.arguments as? String
-                    ?: return result.error("arguments", "앨범 id 가 없다", null)
-                background(result) { photos(bucket) }
+                val path = call.arguments as? String
+                    ?: return result.error("arguments", "폴더 경로가 없다", null)
+                background(result) { photos(path) }
             }
             "readHead" -> {
                 val id = call.argument<String>("id")
@@ -94,29 +102,51 @@ class PhotoChannel(private val activity: Activity) : MethodChannel.MethodCallHan
         if (!granted(imagePermission)) throw PermissionMissing()
     }
 
-    private fun albums(): List<Map<String, Any>> {
-        requireImages()
-        val counts = linkedMapOf<String, Pair<String, Int>>()
-        activity.contentResolver.query(
-            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-            arrayOf(MediaStore.Images.Media.BUCKET_ID, MediaStore.Images.Media.BUCKET_DISPLAY_NAME),
-            "${MediaStore.Images.Media.MIME_TYPE} = ?",
-            arrayOf(JPEG),
-            null,
-        )?.use { cursor ->
-            while (cursor.moveToNext()) {
-                val id = cursor.getString(0) ?: continue
-                val name = cursor.getString(1) ?: id
-                val (_, count) = counts[id] ?: (name to 0)
-                counts[id] = name to count + 1
-            }
-        }
-        return counts.map { (id, value) -> mapOf("id" to id, "name" to value.first, "count" to value.second) }
+    private fun pickFolder(result: MethodChannel.Result) {
+        if (pendingFolder != null) return result.error("busy", "폴더 선택이 진행 중이다", null)
+        pendingFolder = result
+        activity.startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), FOLDER_REQUEST_CODE)
     }
 
-    private fun photos(bucket: String): List<Map<String, Any>> {
+    /** [MainActivity.onActivityResult] 가 넘긴다. 이 채널의 요청이면 true. */
+    fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
+        if (requestCode != FOLDER_REQUEST_CODE) return false
+        val result = pendingFolder ?: return true
+        pendingFolder = null
+        val tree = data?.data
+        if (resultCode != Activity.RESULT_OK || tree == null) {
+            result.success(emptyMap<String, Any>())
+            return true
+        }
+        // 트리 문서 id 는 "<저장소>:<상대 경로>" 이고 내부 저장소는 "primary" 다.
+        val (volume, path) = DocumentsContract.getTreeDocumentId(tree).split(":", limit = 2)
+            .let { it[0] to it.getOrElse(1) { "" }.trim('/') }
+        if (volume != "primary") {
+            result.error("volume", "내부 저장소가 아닌 폴더: $volume", null)
+            return true
+        }
+        result.success(
+            mapOf(
+                "path" to if (path.isEmpty()) "" else "$path/",
+                "name" to path.substringAfterLast('/').ifEmpty { "내부 저장소" },
+            ),
+        )
+        return true
+    }
+
+    /** [path] 와 그 하위 폴더의 JPEG. [path] 는 `Pictures/X/` 처럼 `/` 로 끝나는 상대 경로. */
+    private fun photos(path: String): List<Map<String, Any>> {
         requireImages()
         val collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        val pattern = escapeLike(path) + "%"
+        val (selection, folderArg) = if (Build.VERSION.SDK_INT >= 29) {
+            "${MediaStore.Images.Media.RELATIVE_PATH} LIKE ? ESCAPE '\\'" to pattern
+        } else {
+            @Suppress("DEPRECATION")
+            val root = Environment.getExternalStorageDirectory().absolutePath
+            @Suppress("DEPRECATION")
+            "${MediaStore.Images.Media.DATA} LIKE ? ESCAPE '\\'" to "${escapeLike(root)}/$pattern"
+        }
         val photos = mutableListOf<Map<String, Any>>()
         activity.contentResolver.query(
             collection,
@@ -126,8 +156,8 @@ class PhotoChannel(private val activity: Activity) : MethodChannel.MethodCallHan
                 MediaStore.Images.Media.SIZE,
                 MediaStore.Images.Media.DATE_MODIFIED,
             ),
-            "${MediaStore.Images.Media.BUCKET_ID} = ? AND ${MediaStore.Images.Media.MIME_TYPE} = ?",
-            arrayOf(bucket, JPEG),
+            "$selection AND ${MediaStore.Images.Media.MIME_TYPE} = ?",
+            arrayOf(folderArg, JPEG),
             null,
         )?.use { cursor ->
             while (cursor.moveToNext()) {
@@ -142,6 +172,10 @@ class PhotoChannel(private val activity: Activity) : MethodChannel.MethodCallHan
         }
         return photos
     }
+
+    /** LIKE 의 `%`·`_` 가 폴더 이름에 있어도 글자 그대로 맞추도록 앞에 `\` 를 붙인다. */
+    private fun escapeLike(text: String) =
+        text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
     /** 위치 권한이 있으면 원본(위치 포함)을, 없거나 거부되면 위치가 지워진 사본을 읽는다. */
     private fun readHead(uri: Uri, length: Int): Map<String, Any> {
@@ -196,5 +230,7 @@ class PhotoChannel(private val activity: Activity) : MethodChannel.MethodCallHan
         worker.shutdown()
         pendingAccess?.error("disposed", "액티비티가 끝났다", null)
         pendingAccess = null
+        pendingFolder?.error("disposed", "액티비티가 끝났다", null)
+        pendingFolder = null
     }
 }

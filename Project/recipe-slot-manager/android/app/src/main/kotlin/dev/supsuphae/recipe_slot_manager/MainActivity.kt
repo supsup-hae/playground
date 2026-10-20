@@ -1,5 +1,6 @@
 package dev.supsuphae.recipe_slot_manager
 
+import android.content.Intent
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -32,6 +33,13 @@ class MainActivity : FlutterActivity() {
     ) {
         if (photoChannel?.onPermissionResult(requestCode) == true) return
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    }
+
+    @Deprecated("FlutterActivity 가 아직 Activity Result API 대신 이 콜백을 넘긴다")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (photoChannel?.onActivityResult(requestCode, resultCode, data) == true) return
+        @Suppress("DEPRECATION")
+        super.onActivityResult(requestCode, resultCode, data)
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {

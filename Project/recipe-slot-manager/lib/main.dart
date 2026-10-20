@@ -11,9 +11,9 @@ import 'package:recipe_slot_manager/camera/macos_ptp_transport.dart';
 import 'package:recipe_slot_manager/camera/slot_backup_store.dart';
 import 'package:recipe_slot_manager/design/app_theme.dart';
 import 'package:recipe_slot_manager/library/library_store.dart';
-import 'package:recipe_slot_manager/photo/album_reader.dart';
 import 'package:recipe_slot_manager/photo/auto_index.dart';
 import 'package:recipe_slot_manager/photo/folder_reader.dart';
+import 'package:recipe_slot_manager/photo/media_folder_reader.dart';
 import 'package:recipe_slot_manager/photo/photo_index_store.dart';
 import 'package:recipe_slot_manager/photo/photo_indexer.dart';
 import 'package:recipe_slot_manager/photo/photo_source.dart';
@@ -40,14 +40,17 @@ Future<void> main() async {
   final photoStore = PhotoIndexStore(Directory(p.join(support.path, 'photos')));
   await photoStore.load();
   photoStore.loadErrors.forEach(session.log.add);
-  final albums = AlbumReader();
+  final phoneFolders = MediaFolderReader();
   final folders = FolderReader(
     useBookmarks: Platform.isMacOS,
     onSourceRenewed: photoStore.saveSource,
   );
   final photoIndexer = PhotoIndexer(
     photoStore,
-    readers: {PhotoSourceKind.folder: folders, PhotoSourceKind.album: albums},
+    readers: {
+      PhotoSourceKind.folder: folders,
+      PhotoSourceKind.mediaFolder: phoneFolders,
+    },
     log: session.log,
   );
   // 앱이 끝날 때까지 둔다.
@@ -83,10 +86,10 @@ Future<void> main() async {
           store: photoStore,
           indexer: photoIndexer,
           addSource: (context) => Platform.isAndroid
-              ? pickAlbumSource(context, albums)
+              ? pickMediaFolderSource(phoneFolders)
               : pickFolderSource(useBookmarks: Platform.isMacOS),
           allowLocation: Platform.isAndroid
-              ? () async => albums.requestAccess()
+              ? () async => phoneFolders.requestAccess()
               : null,
         ),
         headerActions: [SyncBar(sync: sync, auth: auth)],

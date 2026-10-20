@@ -5,8 +5,8 @@ import 'package:recipe_slot_manager/photo/photo_indexer.dart';
 import 'package:recipe_slot_manager/photo/photo_source.dart';
 import 'package:recipe_slot_manager/recipe/recipe_fields.dart';
 
-/// 사진 화면에 필요한 것. [addSource] 는 플랫폼마다 다르다(macOS 폴더 고르기, Android 앨범
-/// 선택). [allowLocation] 은 Android 에서 사진 위치 권한을 다시 요청한다.
+/// 사진 화면에 필요한 것. [addSource] 는 플랫폼마다 다르다(macOS 폴더 고르기, Android 시스템
+/// 폴더 선택 창). [allowLocation] 은 Android 에서 사진 위치 권한을 다시 요청한다.
 typedef PhotosSetup = ({
   PhotoIndexStore store,
   PhotoIndexer indexer,
@@ -39,10 +39,13 @@ class _PhotosPageState extends State<PhotosPage> {
       return _tell(e.message);
     }
     if (source == null || !mounted) return;
-    final duplicate = _store.sources.any(
-      (s) => s.kind == source!.kind && s.location == source.location,
-    );
-    if (duplicate) return _tell('이미 추가한 출처입니다');
+    final same = _store.sources.where((s) => s.kind == source!.kind);
+    if (same.any((s) => s.location == source!.location)) {
+      return _tell('이미 추가한 출처입니다');
+    }
+    if (same.any((s) => _overlaps(s.location, source!.location))) {
+      return _tell('이미 추가한 폴더와 겹칩니다');
+    }
     await _store.saveSource(source);
   }
 
@@ -98,7 +101,7 @@ class _PhotosPageState extends State<PhotosPage> {
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
                 child: Text(
-                  '사진 폴더를 추가하세요. 휴대폰에서는 XApp 앨범을 고르면 됩니다.',
+                  '사진 폴더를 추가하세요. 휴대폰에서는 XApp 사진이 저장된 폴더를 고르면 됩니다.',
                   style: TextStyle(color: AppColors.textMuted),
                 ),
               ),
@@ -155,7 +158,7 @@ class _PhotosPageState extends State<PhotosPage> {
     final count = _store.photosOf(source.id).length;
     final kind = switch (source.kind) {
       PhotoSourceKind.folder => '폴더',
-      PhotoSourceKind.album => '앨범',
+      PhotoSourceKind.mediaFolder => '휴대폰 폴더',
     };
     final indexedAt = source.indexedAt?.toLocal();
     return ListTile(
@@ -163,7 +166,7 @@ class _PhotosPageState extends State<PhotosPage> {
       leading: Icon(
         source.kind == PhotoSourceKind.folder
             ? Icons.folder_outlined
-            : Icons.photo_album_outlined,
+            : Icons.phone_android_outlined,
       ),
       title: Text(source.name, overflow: TextOverflow.ellipsis),
       subtitle: Text(
@@ -201,6 +204,14 @@ class _PhotosPageState extends State<PhotosPage> {
         ],
       ),
     );
+  }
+
+  /// 한 폴더가 다른 폴더 안에 있으면 같은 사진을 두 번 색인하므로 겹친다고 본다.
+  static bool _overlaps(String a, String b) {
+    // 휴대폰 폴더의 빈 경로는 내부 저장소 전체다.
+    if (a.isEmpty || b.isEmpty) return true;
+    String folder(String path) => path.endsWith('/') ? path : '$path/';
+    return folder(a).startsWith(folder(b)) || folder(b).startsWith(folder(a));
   }
 
   static String _date(DateTime t) =>

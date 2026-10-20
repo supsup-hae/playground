@@ -167,9 +167,9 @@ void main() {
   group('indexAll', () {
     const album = PhotoSource(
       id: 's2',
-      kind: PhotoSourceKind.album,
+      kind: PhotoSourceKind.mediaFolder,
       name: 'XApp',
-      location: '-17',
+      location: 'Pictures/FUJIFILM XApp/',
     );
 
     test('모든 출처를 차례로 읽고 진행을 알린 뒤 끝나면 진행을 비운다', () async {
@@ -178,7 +178,7 @@ void main() {
         store,
         readers: {
           PhotoSourceKind.folder: reader,
-          PhotoSourceKind.album: albumReader,
+          PhotoSourceKind.mediaFolder: albumReader,
         },
         log: log,
       );
@@ -202,7 +202,7 @@ void main() {
         store,
         readers: {
           PhotoSourceKind.folder: reader,
-          PhotoSourceKind.album: FakePhotoReader()..put('x.jpg'),
+          PhotoSourceKind.mediaFolder: FakePhotoReader()..put('x.jpg'),
         },
         log: log,
       );

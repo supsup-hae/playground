@@ -21,9 +21,9 @@ void main() {
   );
   const album = PhotoSource(
     id: 's2',
-    kind: PhotoSourceKind.album,
+    kind: PhotoSourceKind.mediaFolder,
     name: 'FUJIFILM XApp',
-    location: '-1739773001',
+    location: 'Pictures/FUJIFILM XApp/',
   );
 
   IndexedPhoto photo(

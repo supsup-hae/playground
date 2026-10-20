@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:recipe_slot_manager/photo/album_reader.dart';
+import 'package:recipe_slot_manager/photo/media_folder_reader.dart';
 import 'package:recipe_slot_manager/photo/photo_source.dart';
 import 'package:recipe_slot_manager/ui/photo_source_picker.dart';
 
@@ -9,70 +8,46 @@ void main() {
   final messenger =
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
   late Map<String, Object?> replies;
+  late List<String> calls;
 
   setUp(() {
+    calls = [];
     replies = {
       'requestAccess': {'images': true, 'location': true},
-      'albums': [
-        {'id': '-17', 'name': 'FUJIFILM XApp', 'count': 1204},
-        {'id': '-3', 'name': 'Camera', 'count': 88},
-      ],
+      'pickFolder': {
+        'path': 'Pictures/FUJIFILM XApp/',
+        'name': 'FUJIFILM XApp',
+      },
     };
-    messenger.setMockMethodCallHandler(
-      photoChannel,
-      (call) async => replies[call.method],
-    );
+    messenger.setMockMethodCallHandler(photoChannel, (call) async {
+      calls.add(call.method);
+      return replies[call.method];
+    });
   });
   tearDown(() => messenger.setMockMethodCallHandler(photoChannel, null));
 
-  /// 고른 출처, 또는 던진 오류.
-  Future<Future<Object?>> open(WidgetTester tester) async {
-    late Future<Object?> picked;
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Builder(
-          builder: (context) => TextButton(
-            onPressed: () => picked = pickAlbumSource(
-              context,
-              AlbumReader(),
-            ).then<Object?>((s) => s, onError: (Object e) => e),
-            child: const Text('열기'),
-          ),
-        ),
-      ),
-    );
-    await tester.tap(find.text('열기'));
-    await tester.pumpAndSettle();
-    return picked;
-  }
+  test('권한을 받은 뒤 폴더 선택 창에서 고른 폴더를 출처로 돌려준다', () async {
+    final source = await pickMediaFolderSource(MediaFolderReader());
 
-  testWidgets('권한을 받은 뒤 앨범 목록에서 고른 앨범을 출처로 돌려준다', (tester) async {
-    final picked = await open(tester);
-
-    expect(find.text('FUJIFILM XApp (1204장)'), findsOneWidget);
-    await tester.tap(find.text('FUJIFILM XApp (1204장)'));
-    await tester.pumpAndSettle();
-
-    final source = await picked as PhotoSource?;
-    expect(source?.kind, PhotoSourceKind.album);
+    expect(calls, ['requestAccess', 'pickFolder']);
+    expect(source?.kind, PhotoSourceKind.mediaFolder);
     expect(source?.name, 'FUJIFILM XApp');
-    expect(source?.location, '-17');
+    expect(source?.location, 'Pictures/FUJIFILM XApp/');
   });
 
-  testWidgets('목록을 닫으면 null', (tester) async {
-    final picked = await open(tester);
+  test('폴더 선택을 닫으면 null', () async {
+    replies['pickFolder'] = <String, Object?>{};
 
-    await tester.tapAt(const Offset(5, 5));
-    await tester.pumpAndSettle();
-
-    expect(await picked, isNull);
+    expect(await pickMediaFolderSource(MediaFolderReader()), isNull);
   });
 
-  testWidgets('사진 권한을 거부하면 PhotoSourceException', (tester) async {
+  test('사진 권한을 거부하면 폴더 선택 창을 열지 않고 PhotoSourceException', () async {
     replies['requestAccess'] = {'images': false, 'location': false};
 
-    final picked = await open(tester);
-
-    expect(await picked, isA<PhotoSourceException>());
+    await expectLater(
+      pickMediaFolderSource(MediaFolderReader()),
+      throwsA(isA<PhotoSourceException>()),
+    );
+    expect(calls, ['requestAccess']);
   });
 }

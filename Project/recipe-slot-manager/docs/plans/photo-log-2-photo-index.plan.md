@@ -262,14 +262,14 @@ flutter build apk --debug
 ## 구현 중 바뀐 점
 
 - 위치가 가려진 채 읽은 사진은 다음 색인에서 늘 다시 읽는다. 원본을 읽을 수 있는지는 읽어 봐야 알기 때문이다
-- 출처 고르기는 `lib/ui/photo_source_picker.dart`(macOS 폴더, Android 앨범 대화상자)로 나눴다
+- 출처 고르기는 `lib/ui/photo_source_picker.dart`(macOS 폴더, Android 시스템 폴더 선택 창)로 나눴다
 - 휴대폰에서 디자인 화면을 보던 중이면 첫 탭(레시피)을 보이고, 창이 넓어지면 디자인으로 돌아간다
 - 디자인 화면의 휴대폰 크기 넘침 시험은 셸 대신 화면을 직접 띄워 확인한다
 - 자동 색인(사용자 요청으로 추가): 앱을 열 때와 앱이 다시 앞으로 올 때 모든 출처를 읽는다(`lib/photo/auto_index.dart`). 진행 상태는 색인기(`PhotoIndexer.progress`, `indexAll`)가 들고 있어 화면을 오가도 사진 화면에 보인다
 
-## 열린 결정: Android 폴더 지정
+## 결정: Android 폴더 지정 (2026-10-20, B)
 
-구글 드라이브처럼 Android 에서도 폴더(하위 폴더 포함)를 지정하는 방법. 지금은 MediaStore 앨범(폴더 하나, 하위 폴더 없음)만 고른다.
+구글 드라이브처럼 Android 에서도 폴더(하위 폴더 포함)를 지정하는 방법. 사용자가 B 를 골랐다. 앨범 고르기(`album_reader.dart`, `albums`)는 휴대폰 폴더(`media_folder_reader.dart`, 출처 종류 `mediaFolder`, `pickFolder`)로 바꿨다.
 
 | 방법 | 위치(GPS) | 비고 |
 |---|---|---|

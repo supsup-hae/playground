@@ -2,8 +2,14 @@ import 'dart:typed_data';
 
 import 'package:recipe_slot_manager/photo/photo_info.dart';
 
-/// 사진 출처 종류: Mac 의 폴더, Android 의 사진 앨범(MediaStore 버킷).
-enum PhotoSourceKind { folder, album }
+/// 사진 출처 종류.
+enum PhotoSourceKind {
+  /// 파일 시스템 폴더 (macOS). 위치는 절대 경로.
+  folder,
+
+  /// 휴대폰 내부 저장소의 폴더 (Android MediaStore). 위치는 `Pictures/FUJIFILM XApp/` 같은 상대 경로.
+  mediaFolder,
+}
 
 /// 색인할 사진이 있는 곳.
 final class PhotoSource {
@@ -45,10 +51,10 @@ final class PhotoSource {
   final String id;
   final PhotoSourceKind kind;
 
-  /// 화면에 보일 이름 (폴더 이름, 앨범 이름).
+  /// 화면에 보일 이름 (폴더 이름).
   final String name;
 
-  /// 폴더 경로, 또는 앨범의 MediaStore 버킷 id.
+  /// 폴더 경로. [kind] 에 따라 절대 경로 또는 내부 저장소 상대 경로.
   final String location;
 
   /// macOS 보안 범위 북마크(base64). 다음 실행에서도 폴더를 읽는 데 쓴다.
@@ -80,7 +86,7 @@ final class PhotoSource {
   };
 }
 
-/// 출처 안의 사진 파일. [id] 는 폴더면 출처 안 상대 경로, 앨범이면 `content://` URI.
+/// 출처 안의 사진 파일. [id] 는 폴더면 출처 안 상대 경로, 휴대폰 폴더면 `content://` URI.
 typedef PhotoFile = ({String id, String name, int size, int modifiedMs});
 
 /// 사진 앞부분. [locationRedacted] 면 기기가 위치를 지운 사본을 준 것이다(Android 위치 권한 없음).
@@ -152,7 +158,7 @@ final class PhotoSourceException implements Exception {
   String toString() => 'PhotoSourceException: $message';
 }
 
-/// 출처의 사진 목록과 사진 앞부분을 읽는다. 폴더(macOS)와 앨범(Android)이 따로 구현한다.
+/// 출처의 사진 목록과 사진 앞부분을 읽는다. 폴더(macOS)와 휴대폰 폴더(Android)가 따로 구현한다.
 abstract interface class PhotoSourceReader {
   Future<List<PhotoFile>> list(PhotoSource source);
 
