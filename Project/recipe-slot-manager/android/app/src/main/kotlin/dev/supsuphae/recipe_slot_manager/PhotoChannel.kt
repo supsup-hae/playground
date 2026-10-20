@@ -16,7 +16,7 @@ import io.flutter.plugin.common.MethodChannel
 import java.util.concurrent.Executors
 
 /**
- * Dart `album_reader.dart` 의 요청을 MediaStore 로 처리한다. JPEG 만 다룬다.
+ * Dart `media_folder_reader.dart` 의 요청을 MediaStore 로 처리한다. JPEG 만 다룬다.
  *
  * - `requestAccess`: 사진 읽기·사진 위치 권한을 요청하고 `{images, location}` 을 돌려준다
  * - `pickFolder`: 시스템 폴더 선택 창. 내부 저장소 상대 경로 `{path: "Pictures/X/", name}`, 닫으면 `{}`.

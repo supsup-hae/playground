@@ -92,7 +92,7 @@ final class Recipe {
   };
 }
 
-/// 레시피·묶음 id. 무작위 16바이트를 16진수 32자로.
+/// 레시피·세트 id. 무작위 16바이트를 16진수 32자로.
 String newRecipeId() {
   final random = Random.secure();
   return [

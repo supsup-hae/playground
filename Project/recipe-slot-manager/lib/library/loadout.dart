@@ -1,7 +1,7 @@
 import 'package:recipe_slot_manager/ptp/ptp_codes.dart';
 import 'package:recipe_slot_manager/recipe/recipe.dart';
 
-/// 상황별 묶음: C1–C7 에 넣을 레시피 id. 비운 칸(null)은 카메라 슬롯을 그대로 둔다.
+/// 상황별 세트: C1–C7 에 넣을 레시피 id. 비운 칸(null)은 카메라 슬롯을 그대로 둔다.
 final class Loadout {
   Loadout({
     required this.id,

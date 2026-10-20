@@ -61,7 +61,7 @@ void main() {
     });
   });
 
-  test('저장한 레시피·묶음을 새 저장소에서 그대로 불러오고, 저장 시각을 찍는다', () async {
+  test('저장한 레시피·세트를 새 저장소에서 그대로 불러오고, 저장 시각을 찍는다', () async {
     final store = newStore();
     await store.load();
     await store.saveRecipe(recipe('r1', 'Kodak'));
@@ -94,7 +94,7 @@ void main() {
     expect(store.allRecipes.firstWhere((r) => r.id == 'r2').deletedAt, now);
   });
 
-  test('묶음이 삭제된 레시피를 가리키면 그 칸은 비어 있다', () async {
+  test('세트가 삭제된 레시피를 가리키면 그 칸은 비어 있다', () async {
     final store = newStore();
     await store.load();
     await store.saveRecipe(recipe('r1', 'Kodak'));

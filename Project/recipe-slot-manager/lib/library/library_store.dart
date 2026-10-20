@@ -7,7 +7,7 @@ import 'package:recipe_slot_manager/recipe/recipe.dart';
 import 'package:recipe_slot_manager/util/atomic_json.dart';
 import 'package:recipe_slot_manager/util/serial_queue.dart';
 
-/// 레시피와 묶음을 기기의 JSON 파일(`recipes.json`, `loadouts.json`)에 저장한다.
+/// 레시피와 세트를 기기의 JSON 파일(`recipes.json`, `loadouts.json`)에 저장한다.
 ///
 /// 삭제는 삭제 시각만 기록하고 행은 남겨, 동기화 때 다른 기기에도 삭제가 전해지게 한다.
 class LibraryStore extends ChangeNotifier {
@@ -31,7 +31,7 @@ class LibraryStore extends ChangeNotifier {
       _recipes.values.where((r) => !r.isDeleted).toList()
         ..sort((a, b) => a.name.compareTo(b.name));
 
-  /// 삭제하지 않은 묶음, 이름순.
+  /// 삭제하지 않은 세트, 이름순.
   List<Loadout> get loadouts =>
       _loadouts.values.where((l) => !l.isDeleted).toList()
         ..sort((a, b) => a.name.compareTo(b.name));
@@ -45,7 +45,7 @@ class LibraryStore extends ChangeNotifier {
     _ => null,
   };
 
-  /// 묶음의 슬롯 1–7 에 해당하는 레시피. 비운 칸, 없거나 삭제된 레시피는 null.
+  /// 세트의 슬롯 1–7 에 해당하는 레시피. 비운 칸, 없거나 삭제된 레시피는 null.
   List<Recipe?> slotRecipes(Loadout loadout) => [
     for (final id in loadout.slots) recipeById(id),
   ];

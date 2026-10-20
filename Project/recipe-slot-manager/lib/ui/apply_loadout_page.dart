@@ -15,7 +15,7 @@ import 'package:recipe_slot_manager/recipe/recipe_diff.dart';
 import 'package:recipe_slot_manager/ui/app_shell.dart';
 import 'package:recipe_slot_manager/ui/log_panel.dart';
 
-/// 묶음을 카메라의 현재 7슬롯과 비교해 바뀌는 값을 보이고, 한 번에 쓴다. 다 쓰면 [placeLogger] 가
+/// 세트를 카메라의 현재 7슬롯과 비교해 바뀌는 값을 보이고, 한 번에 쓴다. 다 쓰면 [placeLogger] 가
 /// 위치와 세트를 기록한다.
 class ApplyLoadoutPage extends StatefulWidget {
   const ApplyLoadoutPage({
