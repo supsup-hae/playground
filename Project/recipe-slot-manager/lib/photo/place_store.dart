@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -36,26 +35,21 @@ class PlaceStore extends ChangeNotifier {
   /// [loadErrors] 에 남긴 뒤 빈 캐시로 시작한다.
   Future<void> load() async {
     _loadErrors.clear();
-    _places.clear();
-    if (await _file.exists()) {
-      try {
-        final json = jsonDecode(await _file.readAsString());
-        if (json case {'places': final Map<String, dynamic> places}) {
-          for (final MapEntry(:key, :value) in places.entries) {
-            _places[key] = Place.fromJson(value);
-          }
-        } else {
-          throw FormatException('장소 파일 형식 오류', json);
-        }
-      } on FormatException catch (e) {
-        _places.clear();
-        final stamp = _clock().toUtc().toIso8601String().replaceAll(':', '-');
-        final moved = await _file.rename('${_file.path}.corrupt-$stamp');
-        _loadErrors.add(
-          'places.json 읽기 실패, ${p.basename(moved.path)} 로 옮김: ${e.message}',
-        );
-      }
-    }
+    final read = await readJsonFile(
+      _file,
+      (json) => switch (json) {
+        {'places': final Map<String, dynamic> places} => {
+          for (final MapEntry(:key, :value) in places.entries)
+            key: Place.fromJson(value),
+        },
+        _ => throw FormatException('장소 파일 형식 오류', json),
+      },
+      now: _clock(),
+      errors: _loadErrors,
+    );
+    _places
+      ..clear()
+      ..addAll(read ?? const {});
     notifyListeners();
   }
 

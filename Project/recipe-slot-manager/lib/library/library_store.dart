@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -153,23 +152,19 @@ class LibraryStore extends ChangeNotifier {
     File file,
     String key,
     T Function(Object?) parse,
-  ) async {
-    if (!await file.exists()) return [];
-    try {
-      final json = jsonDecode(await file.readAsString());
-      if (json case final Map<String, dynamic> map) {
-        if (map[key] case final List<dynamic> rows) {
-          return [for (final row in rows) parse(row)];
-        }
-      }
-      throw FormatException('$key 파일 형식 오류', file.path);
-    } on FormatException catch (e) {
-      final stamp = _clock().toUtc().toIso8601String().replaceAll(':', '-');
-      final moved = await file.rename('${file.path}.corrupt-$stamp');
-      _loadErrors.add(
-        '${p.basename(file.path)} 읽기 실패, ${p.basename(moved.path)} 로 옮김: ${e.message}',
-      );
-      return [];
-    }
-  }
+  ) async =>
+      await readJsonFile(
+        file,
+        (json) {
+          if (json case final Map<String, dynamic> map) {
+            if (map[key] case final List<dynamic> rows) {
+              return [for (final row in rows) parse(row)];
+            }
+          }
+          throw FormatException('$key 파일 형식 오류', file.path);
+        },
+        now: _clock(),
+        errors: _loadErrors,
+      ) ??
+      [];
 }
