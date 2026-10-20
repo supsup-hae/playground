@@ -40,6 +40,12 @@ void main() {
       expect(const Place().label, '');
     });
 
+    test('cityLabel 은 도시(없으면 광역)와 나라', () {
+      expect(shibuya.cityLabel, '시부야구, 일본');
+      expect(const Place(country: '일본', admin: '도쿄도').cityLabel, '도쿄도, 일본');
+      expect(const Place().cityLabel, '');
+    });
+
     test('모든 칸을 담는 parts 는 나라부터 길까지', () {
       expect(shibuya.parts, ['일본', '도쿄도', '시부야구', '진난', '공원 거리']);
     });

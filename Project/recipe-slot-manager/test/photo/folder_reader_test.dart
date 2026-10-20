@@ -84,6 +84,17 @@ void main() {
     expect(big.locationRedacted, isFalse);
   });
 
+  test('length 를 주면 그만큼 읽는다 (사진 전체)', () async {
+    write('big.jpg', jpegHeadBytes + 1000);
+    final reader = FolderReader();
+    final source = sourceAt(root.path);
+    final file = (await reader.list(source)).single;
+
+    final all = await reader.readHead(source, file, length: 1 << 26);
+
+    expect(all.bytes, hasLength(jpegHeadBytes + 1000));
+  });
+
   test('폴더가 없으면 PhotoSourceException', () async {
     await expectLater(
       FolderReader().list(sourceAt(p.join(root.path, '없음'))),
@@ -157,6 +168,46 @@ void main() {
       await FolderReader(useBookmarks: true).close(sourceAt(root.path));
 
       expect(calls, isEmpty);
+    });
+
+    test('닫힌 출처의 사진을 읽으면 북마크를 다시 열어 읽는다', () async {
+      write('a.jpg');
+      handler = (call) async => switch (call.method) {
+        'resolve' => {'path': root.path, 'stale': false},
+        _ => null,
+      };
+      final reader = FolderReader(useBookmarks: true);
+      final source = sourceAt('/old', bookmark: 'AQID');
+      final file = (await reader.list(source)).single;
+      await reader.close(source);
+      calls.clear();
+
+      final head = await reader.readHead(source, file);
+      await reader.readHead(source, file);
+
+      expect(head.bytes, hasLength(10));
+      expect(calls.map((c) => c.method), ['resolve']);
+    });
+
+    test('닫힌 출처의 사진 여러 장을 동시에 읽어도 북마크는 한 번만 연다', () async {
+      write('a.jpg');
+      write('b.jpg');
+      handler = (call) async => switch (call.method) {
+        'resolve' => {'path': root.path, 'stale': false},
+        _ => null,
+      };
+      final reader = FolderReader(useBookmarks: true);
+      final source = sourceAt('/old', bookmark: 'AQID');
+      final files = await reader.list(source);
+      await reader.close(source);
+      calls.clear();
+
+      final heads = await Future.wait([
+        for (final file in files) reader.readHead(source, file),
+      ]);
+
+      expect(heads.map((h) => h.bytes.length), [10, 10]);
+      expect(calls.map((c) => c.method), ['resolve']);
     });
 
     test('오래된 북마크면 새 북마크와 경로로 출처를 갱신한다', () async {

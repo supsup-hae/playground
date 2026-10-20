@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:recipe_slot_manager/import/jpeg_exif.dart';
 import 'package:recipe_slot_manager/photo/photo_source.dart';
 
 import 'exif_builder.dart';
@@ -59,7 +60,11 @@ class FakePhotoReader implements PhotoSourceReader {
   Future<void> close(PhotoSource source) async => closed.add(source.id);
 
   @override
-  Future<PhotoHead> readHead(PhotoSource source, PhotoFile file) async {
+  Future<PhotoHead> readHead(
+    PhotoSource source,
+    PhotoFile file, {
+    int length = jpegHeadBytes,
+  }) async {
     reads.add(file.id);
     final entry = files[file.id]!;
     return (bytes: entry.bytes, locationRedacted: entry.redacted);

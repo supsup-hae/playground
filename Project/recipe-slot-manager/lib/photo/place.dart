@@ -74,6 +74,12 @@ final class Place {
     ].join(', ');
   }
 
+  /// 날짜 묶음 제목용 이름: 도시(없으면 광역)와 나라.
+  String get cityLabel => [
+    for (final part in [locality ?? admin, country])
+      if (part != null && part.isNotEmpty) part,
+  ].join(', ');
+
   Map<String, String> toJson() => {
     'country': ?country,
     'admin': ?admin,

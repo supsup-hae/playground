@@ -206,15 +206,16 @@ class PhotoChannel(private val activity: Activity) : MethodChannel.MethodCallHan
         activity.contentResolver.openInputStream(uri)?.use { it.readNBytesCompat(length) }
             ?: throw java.io.FileNotFoundException(uri.toString())
 
+    /** 최대 [length] 바이트. 사진 전체를 읽을 때 큰 값이 와도 실제 읽은 만큼만 메모리를 쓴다. */
     private fun java.io.InputStream.readNBytesCompat(length: Int): ByteArray {
-        val buffer = ByteArray(length)
-        var total = 0
-        while (total < length) {
-            val n = read(buffer, total, length - total)
+        val out = java.io.ByteArrayOutputStream(minOf(length, 1 shl 20))
+        val chunk = ByteArray(64 * 1024)
+        while (out.size() < length) {
+            val n = read(chunk, 0, minOf(chunk.size, length - out.size()))
             if (n < 0) break
-            total += n
+            out.write(chunk, 0, n)
         }
-        return buffer.copyOf(total)
+        return out.toByteArray()
     }
 
     private fun background(result: MethodChannel.Result, work: () -> Any) {

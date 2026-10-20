@@ -46,6 +46,9 @@ class FolderReader implements PhotoSourceReader {
   /// 출처 id → 북마크를 풀어 얻은 경로. 접근은 [close] 까지 열어 둔다.
   final _opened = <String, String>{};
 
+  /// 여는 중인 출처. 동시에 읽는 사진들이 같은 열기를 기다린다.
+  final _opening = <String, Future<String>>{};
+
   @override
   Future<List<PhotoFile>> list(PhotoSource source) async {
     final root = Directory(await _open(source));
@@ -83,15 +86,23 @@ class FolderReader implements PhotoSourceReader {
   }
 
   @override
-  Future<PhotoHead> readHead(PhotoSource source, PhotoFile file) async {
-    final path = p.join(_opened[source.id] ?? source.location, file.id);
+  Future<PhotoHead> readHead(
+    PhotoSource source,
+    PhotoFile file, {
+    int length = jpegHeadBytes,
+  }) async {
+    // 색인 뒤 닫은 출처는 다시 연다. 접근은 다음 [close] 까지 열어 둔다.
+    final base =
+        _opened[source.id] ??
+        await (_opening[source.id] ??= _open(source).whenComplete(() {
+          // remove 가 돌려주는 Future(이 열기 자신)를 기다리지 않도록 값을 돌려주지 않는다.
+          _opening.remove(source.id);
+        }));
+    final path = p.join(base, file.id);
     try {
       final handle = await File(path).open();
       try {
-        return (
-          bytes: await handle.read(jpegHeadBytes),
-          locationRedacted: false,
-        );
+        return (bytes: await handle.read(length), locationRedacted: false);
       } finally {
         await handle.close();
       }

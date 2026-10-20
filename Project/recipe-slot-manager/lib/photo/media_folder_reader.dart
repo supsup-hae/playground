@@ -57,10 +57,14 @@ class MediaFolderReader implements PhotoSourceReader {
   Future<void> close(PhotoSource source) async {}
 
   @override
-  Future<PhotoHead> readHead(PhotoSource source, PhotoFile file) async {
+  Future<PhotoHead> readHead(
+    PhotoSource source,
+    PhotoFile file, {
+    int length = jpegHeadBytes,
+  }) async {
     final result = await _call<Map<Object?, Object?>>('readHead', {
       'id': file.id,
-      'length': jpegHeadBytes,
+      'length': length,
     });
     return (
       bytes: result['bytes'] as Uint8List? ?? Uint8List(0),

@@ -111,6 +111,15 @@ void main() {
     expect(head.locationRedacted, isTrue);
   });
 
+  test('length 를 주면 그만큼 요청한다', () async {
+    handler = (_) async => {'bytes': Uint8List(3), 'locationRedacted': false};
+    const file = (id: 'content://x/7', name: 'a.jpg', size: 1, modifiedMs: 1);
+
+    await reader.readHead(folder, file, length: 1 << 26);
+
+    expect(calls.single.arguments, {'id': 'content://x/7', 'length': 1 << 26});
+  });
+
   test('권한이 없으면 접근 허용 안내', () async {
     handler = (_) async =>
         throw PlatformException(code: 'permission', message: 'denied');
