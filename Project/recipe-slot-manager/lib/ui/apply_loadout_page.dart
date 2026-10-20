@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:recipe_slot_manager/camera/camera_session.dart';
 import 'package:recipe_slot_manager/camera/slot_snapshot.dart';
@@ -6,24 +8,28 @@ import 'package:recipe_slot_manager/design/slot_badge.dart';
 import 'package:recipe_slot_manager/design/tokens.dart';
 import 'package:recipe_slot_manager/library/library_store.dart';
 import 'package:recipe_slot_manager/library/loadout.dart';
+import 'package:recipe_slot_manager/photo/place_logger.dart';
 import 'package:recipe_slot_manager/recipe/recipe.dart';
 import 'package:recipe_slot_manager/recipe/recipe_codec.dart';
 import 'package:recipe_slot_manager/recipe/recipe_diff.dart';
 import 'package:recipe_slot_manager/ui/app_shell.dart';
 import 'package:recipe_slot_manager/ui/log_panel.dart';
 
-/// 묶음을 카메라의 현재 7슬롯과 비교해 바뀌는 값을 보이고, 한 번에 쓴다.
+/// 묶음을 카메라의 현재 7슬롯과 비교해 바뀌는 값을 보이고, 한 번에 쓴다. 다 쓰면 [placeLogger] 가
+/// 위치와 세트를 기록한다.
 class ApplyLoadoutPage extends StatefulWidget {
   const ApplyLoadoutPage({
     super.key,
     required this.session,
     required this.library,
     required this.loadout,
+    this.placeLogger,
   });
 
   final CameraSession session;
   final LibraryStore library;
   final Loadout loadout;
+  final PlaceLogger? placeLogger;
 
   /// PRD 성공 기준: 7슬롯 전체 쓰기 10초 이내.
   static const targetDuration = Duration(seconds: 10);
@@ -55,9 +61,12 @@ class _ApplyLoadoutPageState extends State<ApplyLoadoutPage> {
   });
 
   Future<void> _write() async {
+    final logger = widget.placeLogger;
+    // 위치 권한 창은 카메라에 쓰기 전에 띄운다. 거부해도 저장은 한다.
+    await logger?.prepare();
+    final recipes = widget.library.slotRecipes(widget.loadout);
     final failure = await _session.run('C1–C7에 저장', () async {
       final fresh = await _session.backupFromCamera();
-      final recipes = widget.library.slotRecipes(widget.loadout);
       final targets = [
         for (var i = 0; i < fresh.length; i++)
           switch (recipes[i]) {
@@ -81,8 +90,19 @@ class _ApplyLoadoutPageState extends State<ApplyLoadoutPage> {
         });
       }
     });
-    // 쓰기가 중간에 멈추면 비교 화면이 카메라와 다를 수 있으므로 비우고 다시 읽게 한다.
-    if (failure != null && mounted) setState(() => _current = null);
+    if (failure == null) {
+      // 기록은 위치를 받을 때까지 걸릴 수 있어 기다리지 않는다.
+      unawaited(
+        logger?.record(
+          loadout: widget.loadout,
+          slots: [for (final recipe in recipes) recipe?.name],
+          model: _session.model,
+        ),
+      );
+    } else if (mounted) {
+      // 쓰기가 중간에 멈추면 비교 화면이 카메라와 다를 수 있으므로 비우고 다시 읽게 한다.
+      setState(() => _current = null);
+    }
   }
 
   @override

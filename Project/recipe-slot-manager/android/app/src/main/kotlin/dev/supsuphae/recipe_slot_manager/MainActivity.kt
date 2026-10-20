@@ -10,6 +10,7 @@ class MainActivity : FlutterActivity() {
     private var ocrChannel: OcrChannel? = null
     private var photoChannel: PhotoChannel? = null
     private var geocoderChannel: GeocoderChannel? = null
+    private var locationChannel: LocationChannel? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -29,6 +30,10 @@ class MainActivity : FlutterActivity() {
         geocoderChannel = geocoder
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, GeocoderChannel.CHANNEL)
             .setMethodCallHandler(geocoder)
+        val location = LocationChannel(this)
+        locationChannel = location
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, LocationChannel.CHANNEL)
+            .setMethodCallHandler(location)
     }
 
     override fun onRequestPermissionsResult(
@@ -37,6 +42,7 @@ class MainActivity : FlutterActivity() {
         grantResults: IntArray,
     ) {
         if (photoChannel?.onPermissionResult(requestCode) == true) return
+        if (locationChannel?.onPermissionResult(requestCode) == true) return
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 
@@ -56,6 +62,8 @@ class MainActivity : FlutterActivity() {
         photoChannel = null
         geocoderChannel?.dispose()
         geocoderChannel = null
+        locationChannel?.dispose()
+        locationChannel = null
         super.cleanUpFlutterEngine(flutterEngine)
     }
 }

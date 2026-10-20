@@ -3,6 +3,7 @@ import 'package:recipe_slot_manager/photo/photo_index_store.dart';
 import 'package:recipe_slot_manager/photo/photo_indexer.dart';
 import 'package:recipe_slot_manager/photo/photo_query.dart';
 import 'package:recipe_slot_manager/photo/photo_source.dart';
+import 'package:recipe_slot_manager/photo/place_log_store.dart';
 import 'package:recipe_slot_manager/photo/place_store.dart';
 import 'package:recipe_slot_manager/ui/photo_thumbnail.dart';
 
@@ -10,12 +11,13 @@ import 'package:recipe_slot_manager/ui/photo_thumbnail.dart';
 ///
 /// - [addSource]: 플랫폼마다 다르다(macOS 폴더 고르기, Android 시스템 폴더 선택 창)
 /// - [allowLocation]: Android 에서 사진 위치 권한을 다시 요청한다
-/// - [filter]: 찾기 조건
+/// - [filter]: 찾기 조건. 세트 저장 기록([logs])에는 연도·지역·검색어만 쓴다
 /// - [mapTiles]: 지도 타일(OpenStreetMap)을 받는다. 시험에서는 끈다
 typedef PhotosSetup = ({
   PhotoIndexStore store,
   PhotoIndexer indexer,
   PlaceStore places,
+  PlaceLogStore logs,
   PhotoThumbnails thumbnails,
   ValueNotifier<PhotoFilter> filter,
   Future<PhotoSource?> Function(BuildContext context) addSource,

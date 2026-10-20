@@ -4,6 +4,7 @@ import 'package:recipe_slot_manager/design/slot_badge.dart';
 import 'package:recipe_slot_manager/design/tokens.dart';
 import 'package:recipe_slot_manager/library/library_store.dart';
 import 'package:recipe_slot_manager/library/loadout.dart';
+import 'package:recipe_slot_manager/photo/place_logger.dart';
 import 'package:recipe_slot_manager/ptp/ptp_codes.dart';
 import 'package:recipe_slot_manager/recipe/recipe.dart';
 import 'package:recipe_slot_manager/ui/apply_loadout_page.dart';
@@ -15,10 +16,12 @@ class LoadoutListPage extends StatelessWidget {
     super.key,
     required this.library,
     required this.session,
+    this.placeLogger,
   });
 
   final LibraryStore library;
   final CameraSession session;
+  final PlaceLogger? placeLogger;
 
   void _push(BuildContext context, Widget page) =>
       Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
@@ -84,6 +87,7 @@ class LoadoutListPage extends StatelessWidget {
                                 session: session,
                                 library: library,
                                 loadout: loadout,
+                                placeLogger: placeLogger,
                               ),
                             ),
                           ),

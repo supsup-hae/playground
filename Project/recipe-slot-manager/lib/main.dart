@@ -14,11 +14,14 @@ import 'package:recipe_slot_manager/library/library_store.dart';
 import 'package:recipe_slot_manager/photo/auto_index.dart';
 import 'package:recipe_slot_manager/photo/folder_reader.dart';
 import 'package:recipe_slot_manager/photo/geocoder.dart';
+import 'package:recipe_slot_manager/photo/locator.dart';
 import 'package:recipe_slot_manager/photo/media_folder_reader.dart';
 import 'package:recipe_slot_manager/photo/photo_index_store.dart';
 import 'package:recipe_slot_manager/photo/photo_indexer.dart';
 import 'package:recipe_slot_manager/photo/photo_query.dart';
 import 'package:recipe_slot_manager/photo/photo_source.dart';
+import 'package:recipe_slot_manager/photo/place_log_store.dart';
+import 'package:recipe_slot_manager/photo/place_logger.dart';
 import 'package:recipe_slot_manager/photo/place_resolver.dart';
 import 'package:recipe_slot_manager/photo/place_store.dart';
 import 'package:recipe_slot_manager/sync/remote_library.dart';
@@ -53,6 +56,16 @@ Future<void> main() async {
   final placeStore = PlaceStore(Directory(p.join(support.path, 'photos')));
   await placeStore.load();
   placeStore.loadErrors.forEach(session.log.add);
+  final placeLogs = PlaceLogStore(Directory(p.join(support.path, 'photos')));
+  await placeLogs.load();
+  placeLogs.loadErrors.forEach(session.log.add);
+  final places = PlaceResolver(
+    photos: photoStore,
+    places: placeStore,
+    geocoder: const PlatformGeocoder(),
+    log: session.log,
+    logs: placeLogs,
+  );
   final photoIndexer = PhotoIndexer(
     photoStore,
     readers: {
@@ -60,12 +73,7 @@ Future<void> main() async {
       PhotoSourceKind.mediaFolder: phoneFolders,
     },
     log: session.log,
-    places: PlaceResolver(
-      photos: photoStore,
-      places: placeStore,
-      geocoder: const PlatformGeocoder(),
-      log: session.log,
-    ),
+    places: places,
   );
   // 앱이 끝날 때까지 둔다.
   startAutoIndex(photoIndexer);
@@ -100,6 +108,7 @@ Future<void> main() async {
           store: photoStore,
           indexer: photoIndexer,
           places: placeStore,
+          logs: placeLogs,
           thumbnails: PhotoThumbnails(photoIndexer),
           filter: ValueNotifier(const PhotoFilter()),
           mapTiles: true,
@@ -109,6 +118,13 @@ Future<void> main() async {
           allowLocation: Platform.isAndroid
               ? () async => phoneFolders.requestAccess()
               : null,
+        ),
+        // macOS 는 위치를 받지 않고 기록만 남긴다.
+        placeLogger: PlaceLogger(
+          store: placeLogs,
+          locator: Platform.isAndroid ? const PlatformLocator() : null,
+          log: session.log,
+          resolver: places,
         ),
         headerActions: [SyncBar(sync: sync, auth: auth)],
       ),

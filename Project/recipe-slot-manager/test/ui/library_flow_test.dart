@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:recipe_slot_manager/library/loadout.dart';
+import 'package:recipe_slot_manager/photo/locator.dart';
 import 'package:recipe_slot_manager/recipe/recipe.dart';
 import 'package:recipe_slot_manager/ui/apply_loadout_page.dart';
 
@@ -103,6 +104,7 @@ void main() {
           session: app.session,
           library: app.library,
           loadout: loadout,
+          placeLogger: app.placeLogger,
         ),
       );
       await TestApp.settle(tester);
@@ -142,6 +144,47 @@ void main() {
       final backups = (await tester.runAsync(app.backups.list))!;
       expect(backups, hasLength(1));
       expect(find.textContaining('초'), findsOneWidget);
+    });
+
+    testWidgets('저장이 끝나면 위치 권한을 먼저 묻고, 위치와 세트를 기록한다', (tester) async {
+      app.locator.fix = (
+        point: (latitude: 35.6587, longitude: 139.7005),
+        accuracy: 8,
+      );
+      await prepare(tester);
+
+      await TestApp.tapAndWait(tester, find.text('C1–C7에 저장'));
+      await TestApp.settle(tester);
+
+      expect(app.locator.accessRequests, 1);
+      final saved = app.placeLogStore.logs.single;
+      expect(saved.loadoutName, '야간');
+      expect(saved.slots, [null, 'Night', null, null, null, null, null]);
+      expect(saved.location, (latitude: 35.6587, longitude: 139.7005));
+      expect(saved.model, app.session.model);
+    });
+
+    testWidgets('위치 권한을 거부해도 저장하고 위치 없이 기록한다', (tester) async {
+      app.locator
+        ..granted = false
+        ..failure = const LocateException('denied', '위치 권한이 없습니다');
+      await prepare(tester);
+
+      await TestApp.tapAndWait(tester, find.text('C1–C7에 저장'));
+      await TestApp.settle(tester);
+
+      expect(app.transport.slots[2]![0xD19D], u16(15));
+      expect(app.placeLogStore.logs.single.missingReason, '위치 권한이 없습니다');
+    });
+
+    testWidgets('저장이 실패하면 기록하지 않는다', (tester) async {
+      await prepare(tester);
+      app.transport.rejectSet[0xD18C] = 0x201D;
+
+      await TestApp.tapAndWait(tester, find.text('C1–C7에 저장'));
+      await TestApp.settle(tester);
+
+      expect(app.placeLogStore.logs, isEmpty);
     });
   });
 }
