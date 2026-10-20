@@ -23,6 +23,7 @@
 /* Begin PBXBuildFile section */
 		0ADBB50C53BEC4C56AFBD5DA /* PtpChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A1240A4C2BD1155C05898D /* PtpChannel.swift */; };
 		83A7C7182073AED946001963 /* OcrChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EACBFC9E5268EFCCD8147B1 /* OcrChannel.swift */; };
+		5C3D7B2F9A4E6C8D0F1B2A3E /* GeocoderChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F0B2C4D6E3A5B7C9D1F2E4A /* GeocoderChannel.swift */; };
 		4D2B6A1E8C3F5A7B9E0D1C2F /* BookmarkChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E9A1B3C5D2F4A6B8C0E1D3F /* BookmarkChannel.swift */; };
 		331C80D8294CF71000263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C80D7294CF71000263BE5 /* RunnerTests.swift */; };
 		335BBD1B22A9A15E00E9071D /* GeneratedPluginRegistrant.swift in Sources */ = {isa = PBXBuildFile; fileRef = 335BBD1A22A9A15E00E9071D /* GeneratedPluginRegistrant.swift */; };
@@ -85,6 +86,7 @@
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		F0A1240A4C2BD1155C05898D /* PtpChannel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PtpChannel.swift; sourceTree = "<group>"; };
 		0EACBFC9E5268EFCCD8147B1 /* OcrChannel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OcrChannel.swift; sourceTree = "<group>"; };
+		8F0B2C4D6E3A5B7C9D1F2E4A /* GeocoderChannel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GeocoderChannel.swift; sourceTree = "<group>"; };
 		7E9A1B3C5D2F4A6B8C0E1D3F /* BookmarkChannel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BookmarkChannel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -180,6 +182,7 @@
 				33BA886A226E78AF003329D5 /* Configs */,
 				F0A1240A4C2BD1155C05898D /* PtpChannel.swift */,
 				0EACBFC9E5268EFCCD8147B1 /* OcrChannel.swift */,
+				8F0B2C4D6E3A5B7C9D1F2E4A /* GeocoderChannel.swift */,
 				7E9A1B3C5D2F4A6B8C0E1D3F /* BookmarkChannel.swift */,
 			);
 			path = Runner;
@@ -368,6 +371,7 @@
 				335BBD1B22A9A15E00E9071D /* GeneratedPluginRegistrant.swift in Sources */,
 				0ADBB50C53BEC4C56AFBD5DA /* PtpChannel.swift in Sources */,
 				83A7C7182073AED946001963 /* OcrChannel.swift in Sources */,
+				5C3D7B2F9A4E6C8D0F1B2A3E /* GeocoderChannel.swift in Sources */,
 				4D2B6A1E8C3F5A7B9E0D1C2F /* BookmarkChannel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
