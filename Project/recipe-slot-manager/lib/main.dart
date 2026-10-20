@@ -13,15 +13,20 @@ import 'package:recipe_slot_manager/design/app_theme.dart';
 import 'package:recipe_slot_manager/library/library_store.dart';
 import 'package:recipe_slot_manager/photo/auto_index.dart';
 import 'package:recipe_slot_manager/photo/folder_reader.dart';
+import 'package:recipe_slot_manager/photo/geocoder.dart';
 import 'package:recipe_slot_manager/photo/media_folder_reader.dart';
 import 'package:recipe_slot_manager/photo/photo_index_store.dart';
 import 'package:recipe_slot_manager/photo/photo_indexer.dart';
+import 'package:recipe_slot_manager/photo/photo_query.dart';
 import 'package:recipe_slot_manager/photo/photo_source.dart';
+import 'package:recipe_slot_manager/photo/place_resolver.dart';
+import 'package:recipe_slot_manager/photo/place_store.dart';
 import 'package:recipe_slot_manager/sync/remote_library.dart';
 import 'package:recipe_slot_manager/sync/supabase_config.dart';
 import 'package:recipe_slot_manager/sync/sync_service.dart';
 import 'package:recipe_slot_manager/ui/app_shell.dart';
 import 'package:recipe_slot_manager/ui/photo_source_picker.dart';
+import 'package:recipe_slot_manager/ui/photo_thumbnail.dart';
 import 'package:recipe_slot_manager/ui/sync_bar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -45,6 +50,9 @@ Future<void> main() async {
     useBookmarks: Platform.isMacOS,
     onSourceRenewed: photoStore.saveSource,
   );
+  final placeStore = PlaceStore(Directory(p.join(support.path, 'photos')));
+  await placeStore.load();
+  placeStore.loadErrors.forEach(session.log.add);
   final photoIndexer = PhotoIndexer(
     photoStore,
     readers: {
@@ -52,6 +60,12 @@ Future<void> main() async {
       PhotoSourceKind.mediaFolder: phoneFolders,
     },
     log: session.log,
+    places: PlaceResolver(
+      photos: photoStore,
+      places: placeStore,
+      geocoder: const PlatformGeocoder(),
+      log: session.log,
+    ),
   );
   // 앱이 끝날 때까지 둔다.
   startAutoIndex(photoIndexer);
@@ -85,6 +99,10 @@ Future<void> main() async {
         photos: (
           store: photoStore,
           indexer: photoIndexer,
+          places: placeStore,
+          thumbnails: PhotoThumbnails(photoIndexer),
+          filter: ValueNotifier(const PhotoFilter()),
+          mapTiles: true,
           addSource: (context) => Platform.isAndroid
               ? pickMediaFolderSource(phoneFolders)
               : pickFolderSource(useBookmarks: Platform.isMacOS),

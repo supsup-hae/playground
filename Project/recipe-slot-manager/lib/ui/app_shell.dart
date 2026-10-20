@@ -7,6 +7,7 @@ import 'package:recipe_slot_manager/ui/design_gallery_page.dart';
 import 'package:recipe_slot_manager/ui/loadout_list_page.dart';
 import 'package:recipe_slot_manager/ui/log_panel.dart';
 import 'package:recipe_slot_manager/ui/photos_page.dart';
+import 'package:recipe_slot_manager/ui/photos_setup.dart';
 import 'package:recipe_slot_manager/ui/raw_preview_page.dart';
 import 'package:recipe_slot_manager/ui/recipe_list_page.dart';
 import 'package:recipe_slot_manager/ui/slots_page.dart';
@@ -79,7 +80,7 @@ class _AppShellState extends State<AppShell> {
         library: widget.library,
         developer: _developer,
       ),
-      4 => PhotosPage(setup: widget.photos),
+      4 => PhotosPage(setup: widget.photos, library: widget.library),
       _ => const DesignGalleryPage(),
     };
     final content = Column(

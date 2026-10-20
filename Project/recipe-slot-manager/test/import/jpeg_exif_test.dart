@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:recipe_slot_manager/import/jpeg_exif.dart';
 import 'package:recipe_slot_manager/import/recipe_import.dart';
@@ -106,6 +108,41 @@ void main() {
         39,
         31.2,
       ]);
+    });
+  });
+
+  group('readExifThumbnail', () {
+    test('IFD1 의 JPEG 썸네일을 꺼낸다', () {
+      final thumbnail = Uint8List.fromList([0xFF, 0xD8, 1, 2, 3, 0xFF, 0xD9]);
+
+      expect(readExifThumbnail(jpegWithExif(thumbnail: thumbnail)), thumbnail);
+    });
+
+    test('빅 엔디언에서도 꺼낸다', () {
+      final thumbnail = Uint8List.fromList([0xFF, 0xD8, 9, 0xFF, 0xD9]);
+
+      expect(
+        readExifThumbnail(jpegWithExif(thumbnail: thumbnail, bigEndian: true)),
+        thumbnail,
+      );
+    });
+
+    test('썸네일이 없거나 JPEG 이 아니거나 파일이 잘렸으면 null', () {
+      expect(readExifThumbnail(jpegWithExif()), isNull);
+      expect(
+        readExifThumbnail(
+          jpegWithExif(thumbnail: Uint8List.fromList([0, 0, 0])),
+        ),
+        isNull,
+      );
+      expect(readExifThumbnail(Uint8List.fromList([1, 2, 3])), isNull);
+      final jpeg = jpegWithExif(
+        thumbnail: Uint8List.fromList(List.filled(100, 0xFF)..[1] = 0xD8),
+      );
+      expect(
+        readExifThumbnail(Uint8List.sublistView(jpeg, 0, jpeg.length - 60)),
+        isNull,
+      );
     });
   });
 

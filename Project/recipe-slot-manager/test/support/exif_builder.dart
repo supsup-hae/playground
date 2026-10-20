@@ -80,7 +80,9 @@ Uint8List fujiMakerNote(Map<int, (int, List<int>)> tags) {
 /// [ifd0Tags]·[exifTags] 는 각 IFD 에 더할 태그, [gpsTags] 가 있으면 GPS IFD 를 만든다.
 /// [brokenExifPointer] 면 Exif IFD 위치 태그에 값을 두 개 넣는다(깨진 파일).
 /// [brokenGpsPointer] 면 GPS IFD 위치를 TIFF 밖으로 둔다(깨진 파일).
+/// [thumbnail] 이 있으면 IFD1 에 썸네일(JPEGInterchangeFormat)로 넣는다.
 Uint8List jpegWithExif({
+  Uint8List? thumbnail,
   Uint8List? makerNote,
   Map<int, (int, List<int>)> ifd0Tags = const {},
   Map<int, (int, List<int>)> exifTags = const {},
@@ -109,11 +111,33 @@ Uint8List jpegWithExif({
     ..setUint8(1, bigEndian ? 0x4D : 0x49)
     ..setUint16(2, 42, endian)
     ..setUint32(4, ifd0At, endian);
+  final ifd0Bytes = _ifd(ifd0Entries(exifAt, gpsAt), ifd0At, endian);
+  final gpsBytes = gpsTags == null
+      ? Uint8List(0)
+      : _ifd(gpsTags, gpsAt, endian);
+  final ifd1At = gpsAt + gpsBytes.length;
+  // IFD1: 썸네일 위치·길이 두 항목(2 + 12 × 2 + 4 = 30바이트) 뒤에 썸네일 바이트.
+  final ifd1Bytes = thumbnail == null
+      ? Uint8List(0)
+      : _ifd(
+          {
+            0x0201: (tiffLong, [ifd1At + 30]),
+            0x0202: (tiffLong, [thumbnail.length]),
+          },
+          ifd1At,
+          endian,
+        );
+  if (thumbnail != null) {
+    final entries = ByteData.sublistView(ifd0Bytes).getUint16(0, endian);
+    ByteData.sublistView(ifd0Bytes).setUint32(2 + 12 * entries, ifd1At, endian);
+  }
   final tiff = [
     ...tiffHeader.buffer.asUint8List(),
-    ..._ifd(ifd0Entries(exifAt, gpsAt), ifd0At, endian),
+    ...ifd0Bytes,
     ..._ifd(exif, exifAt, endian),
-    if (gpsTags != null) ..._ifd(gpsTags, gpsAt, endian),
+    ...gpsBytes,
+    ...ifd1Bytes,
+    ...?thumbnail,
   ];
   final app1 = [...'Exif'.codeUnits, 0, 0, ...tiff];
   final length = app1.length + 2;

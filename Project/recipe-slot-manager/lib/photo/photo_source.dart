@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:recipe_slot_manager/import/jpeg_exif.dart';
 import 'package:recipe_slot_manager/photo/photo_info.dart';
 
 /// 사진 출처 종류.
@@ -162,7 +163,12 @@ final class PhotoSourceException implements Exception {
 abstract interface class PhotoSourceReader {
   Future<List<PhotoFile>> list(PhotoSource source);
 
-  Future<PhotoHead> readHead(PhotoSource source, PhotoFile file);
+  /// 사진 앞 [length] 바이트. 사진 전체가 필요하면 파일보다 큰 값을 준다.
+  Future<PhotoHead> readHead(
+    PhotoSource source,
+    PhotoFile file, {
+    int length = jpegHeadBytes,
+  });
 
   /// [list] 로 연 출처 접근을 닫는다. 색인이 끝나면(실패해도) 부른다.
   Future<void> close(PhotoSource source);

@@ -6,6 +6,7 @@ import 'package:recipe_slot_manager/import/recipe_import.dart';
 import 'package:recipe_slot_manager/photo/photo_index_store.dart';
 import 'package:recipe_slot_manager/photo/photo_info.dart';
 import 'package:recipe_slot_manager/photo/photo_source.dart';
+import 'package:recipe_slot_manager/photo/place_resolver.dart';
 import 'package:recipe_slot_manager/util/serial_queue.dart';
 
 /// 색인 한 번의 결과.
@@ -20,11 +21,19 @@ typedef PhotoIndexResult = ({
 /// 출처의 사진 목록을 색인과 비교해 새 사진과 바뀐 사진만 읽고 저장한다.
 /// [indexAll] 의 진행을 [progress] 로 알린다.
 class PhotoIndexer extends ChangeNotifier {
-  PhotoIndexer(this.store, {required this.readers, required this.log});
+  PhotoIndexer(
+    this.store, {
+    required this.readers,
+    required this.log,
+    this.places,
+  });
 
   final PhotoIndexStore store;
   final Map<PhotoSourceKind, PhotoSourceReader> readers;
   final CameraLog log;
+
+  /// 있으면 [indexAll] 이 출처를 다 읽은 뒤 장소 이름이 없는 좌표를 묻는다.
+  final PlaceResolver? places;
 
   /// 색인을 하나씩 한다. 겹친 색인은 앞 색인이 저장한 결과와 비교한다.
   final _queue = SerialQueue();
@@ -38,8 +47,8 @@ class PhotoIndexer extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 모든 출처를 차례로 읽는다. 읽지 못한 출처는 로그에 남기고 다음 출처로 넘어가며, 그 이유
-  /// 목록을 돌려준다. 이미 읽는 중이면 아무것도 하지 않는다.
+  /// 모든 출처를 차례로 읽고, [places] 가 있으면 장소 이름을 묻는다. 읽지 못한 출처는 로그에
+  /// 남기고 다음 출처로 넘어가며, 그 이유 목록을 돌려준다. 이미 읽는 중이면 아무것도 하지 않는다.
   Future<List<String>> indexAll() async {
     if (_progress != null) return const [];
     final failures = <String>[];
@@ -60,6 +69,19 @@ class PhotoIndexer extends ChangeNotifier {
           final message = '${source.name}: ${e.message}';
           log.add('사진 색인 실패: $message');
           failures.add(message);
+        }
+      }
+      if (places case final places?) {
+        const name = '장소 이름';
+        _setProgress((name: name, done: 0, total: 0));
+        try {
+          await places.resolveMissing(
+            onProgress: (done, total) =>
+                _setProgress((name: name, done: done, total: total)),
+          );
+        } on FileSystemException catch (e) {
+          log.add('장소 이름 저장 실패: ${e.message}');
+          failures.add('$name: ${e.message}');
         }
       }
     } finally {

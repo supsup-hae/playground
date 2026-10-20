@@ -12,6 +12,7 @@ class MainFlutterWindow: NSWindow {
     PtpChannel.register(with: flutterViewController.registrar(forPlugin: "PtpChannel"))
     OcrChannel.register(with: flutterViewController.registrar(forPlugin: "OcrChannel"))
     BookmarkChannel.register(with: flutterViewController.registrar(forPlugin: "BookmarkChannel"))
+    GeocoderChannel.register(with: flutterViewController.registrar(forPlugin: "GeocoderChannel"))
 
     super.awakeFromNib()
   }

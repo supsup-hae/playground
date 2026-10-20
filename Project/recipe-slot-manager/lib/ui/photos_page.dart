@@ -1,221 +1,300 @@
 import 'package:flutter/material.dart';
 import 'package:recipe_slot_manager/design/tokens.dart';
-import 'package:recipe_slot_manager/photo/photo_index_store.dart';
-import 'package:recipe_slot_manager/photo/photo_indexer.dart';
-import 'package:recipe_slot_manager/photo/photo_source.dart';
-import 'package:recipe_slot_manager/recipe/recipe_fields.dart';
+import 'package:recipe_slot_manager/library/library_store.dart';
+import 'package:recipe_slot_manager/photo/photo_query.dart';
+import 'package:recipe_slot_manager/ui/photo_detail_page.dart';
+import 'package:recipe_slot_manager/ui/photo_list_view.dart';
+import 'package:recipe_slot_manager/ui/photo_map_view.dart';
+import 'package:recipe_slot_manager/ui/photo_sources_panel.dart';
+import 'package:recipe_slot_manager/ui/photos_setup.dart';
 
-/// 사진 화면에 필요한 것. [addSource] 는 플랫폼마다 다르다(macOS 폴더 고르기, Android 시스템
-/// 폴더 선택 창). [allowLocation] 은 Android 에서 사진 위치 권한을 다시 요청한다.
-typedef PhotosSetup = ({
-  PhotoIndexStore store,
-  PhotoIndexer indexer,
-  Future<PhotoSource?> Function(BuildContext context) addSource,
-  Future<void> Function()? allowLocation,
-});
+enum _View { list, map }
 
-/// 사진 출처 등록, 새 사진 읽기, 색인 요약.
+/// 사진 찾기: 목록·지도 전환, 검색어, 연도·지역·위치 없음·필름 시뮬레이션 필터.
+/// 출처 관리는 오른쪽 위 버튼의 시트에 있다.
 class PhotosPage extends StatefulWidget {
-  const PhotosPage({super.key, required this.setup});
+  const PhotosPage({super.key, required this.setup, required this.library});
 
   final PhotosSetup setup;
+  final LibraryStore library;
 
   @override
   State<PhotosPage> createState() => _PhotosPageState();
 }
 
 class _PhotosPageState extends State<PhotosPage> {
-  PhotoIndexStore get _store => widget.setup.store;
+  var _view = _View.list;
+  late final _search = TextEditingController(text: _filter.value.text);
 
-  void _tell(String message) =>
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
+  PhotosSetup get _setup => widget.setup;
+  ValueNotifier<PhotoFilter> get _filter => _setup.filter;
 
-  Future<void> _add() async {
-    final PhotoSource? source;
-    try {
-      source = await widget.setup.addSource(context);
-    } on PhotoSourceException catch (e) {
-      return _tell(e.message);
-    }
-    if (source == null || !mounted) return;
-    final same = _store.sources.where((s) => s.kind == source!.kind);
-    if (same.any((s) => s.location == source!.location)) {
-      return _tell('이미 추가한 출처입니다');
-    }
-    if (same.any((s) => _overlaps(s.location, source!.location))) {
-      return _tell('이미 추가한 폴더와 겹칩니다');
-    }
-    await _store.saveSource(source);
-  }
+  void _update(PhotoFilter Function(PhotoFilter f) change) =>
+      _filter.value = change(_filter.value);
 
-  Future<void> _remove(PhotoSource source) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('${source.name} 빼기'),
-        content: const Text('목록과 색인에서만 빼고 사진 파일은 지우지 않습니다.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('취소'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('빼기'),
-          ),
-        ],
+  void _open(PhotoEntry entry) => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) =>
+          PhotoDetailPage(entry: entry, setup: _setup, library: widget.library),
+    ),
+  );
+
+  void _openSources() => showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    // 시트 안의 알림이 시트 뒤에 가리지 않도록 시트에 따로 메신저를 둔다.
+    builder: (context) => SizedBox(
+      height: MediaQuery.sizeOf(context).height * 0.8,
+      child: ScaffoldMessenger(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: PhotoSourcesPanel(setup: _setup),
+        ),
       ),
-    );
-    if (confirmed == true) await _store.removeSource(source.id);
-  }
+    ),
+  );
 
-  Future<void> _indexAll() async {
-    final failures = await widget.setup.indexer.indexAll();
-    if (mounted && failures.isNotEmpty) _tell(failures.join('\n'));
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([_store, widget.setup.indexer]),
+      listenable: Listenable.merge([
+        _setup.store,
+        _setup.places,
+        _setup.indexer,
+        _filter,
+      ]),
       builder: (context, _) {
-        final sources = _store.sources;
-        final summary = _store.summary;
-        final redacted = _store.photos.any((p) => p.locationRedacted);
-        final progress = widget.setup.indexer.progress;
-        return ListView(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+        final filter = _filter.value;
+        final photos = _setup.store.photos;
+        final entries = queryPhotos(photos, _setup.places, filter);
+        final facets = photoFacets(photos, _setup.places, filter);
+        final noLocation = photos
+            .where((p) => p.info != null && p.info!.location == null)
+            .length;
+        final progress = _setup.indexer.progress;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                const Expanded(child: Text('사진 출처', style: AppType.label)),
-                TextButton.icon(
-                  onPressed: progress == null ? _add : null,
-                  icon: const Icon(Icons.add),
-                  label: const Text('추가'),
-                ),
-              ],
-            ),
-            if (sources.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-                child: Text(
-                  '사진 폴더를 추가하세요. 휴대폰에서는 XApp 사진이 저장된 폴더를 고르면 됩니다.',
-                  style: TextStyle(color: AppColors.textMuted),
-                ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.sm,
+                0,
               ),
-            for (final source in sources) _sourceTile(source, progress == null),
-            const SizedBox(height: AppSpacing.md),
-            FilledButton(
-              onPressed: sources.isNotEmpty && progress == null
-                  ? _indexAll
-                  : null,
-              child: const Text('새 사진 읽기'),
+              child: Row(
+                children: [
+                  SegmentedButton<_View>(
+                    segments: const [
+                      ButtonSegment(
+                        value: _View.list,
+                        icon: Icon(Icons.grid_view),
+                        label: Text('목록'),
+                      ),
+                      ButtonSegment(
+                        value: _View.map,
+                        icon: Icon(Icons.map_outlined),
+                        label: Text('지도'),
+                      ),
+                    ],
+                    selected: {_view},
+                    onSelectionChanged: (s) => setState(() => _view = s.first),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    tooltip: '사진 출처',
+                    onPressed: _openSources,
+                    icon: const Icon(Icons.folder_open_outlined),
+                  ),
+                ],
+              ),
             ),
             if (progress != null) ...[
-              const SizedBox(height: AppSpacing.sm),
               LinearProgressIndicator(
                 value: progress.total == 0
                     ? null
                     : progress.done / progress.total,
               ),
-              Text(
-                '${progress.name} ${progress.done} / ${progress.total}',
-                style: const TextStyle(color: AppColors.textMuted),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: Text(
+                  '${progress.name} ${progress.done} / ${progress.total}',
+                  style: const TextStyle(color: AppColors.textMuted),
+                ),
               ),
             ],
-            if (redacted) ...[
-              const SizedBox(height: AppSpacing.md),
-              _locationNotice(),
-            ],
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              '전체 ${summary.total}장 · 위치 있음 ${summary.withLocation}장 · '
-              '읽지 못함 ${summary.failed}장',
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.sm,
+                AppSpacing.lg,
+                0,
+              ),
+              child: TextField(
+                controller: _search,
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.search),
+                  hintText: '장소·파일·시뮬레이션 검색',
+                  isDense: true,
+                ),
+                onChanged: (text) => _update((f) => f.copyWith(text: text)),
+              ),
             ),
-            const SizedBox(height: AppSpacing.sm),
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              children: [
-                for (final MapEntry(key: code, value: count)
-                    in summary.byFilmSimulation.entries)
-                  Chip(
-                    label: Text(
-                      '${fieldById['filmSimulation']!.display(code.toDouble())} $count',
-                    ),
+            SizedBox(
+              height: 56,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.sm,
+                ),
+                children: [
+                  _yearMenu(filter, facets),
+                  const SizedBox(width: AppSpacing.sm),
+                  _regionMenu(filter, facets),
+                  const SizedBox(width: AppSpacing.sm),
+                  FilterChip(
+                    label: Text('위치 없음 $noLocation'),
+                    selected: filter.noLocationOnly,
+                    onSelected: (on) =>
+                        _update((f) => f.copyWith(noLocationOnly: on)),
                   ),
-              ],
+                  for (final MapEntry(key: code, value: count)
+                      in facets.films.entries) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    FilterChip(
+                      label: Text('${filmName(code)} $count'),
+                      selected: filter.films.contains(code),
+                      onSelected: (on) => _update(
+                        (f) => f.copyWith(
+                          films: on
+                              ? {...f.films, code}
+                              : ({...f.films}..remove(code)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: Text(
+                '${entries.length}장 · 위치 없음 '
+                '${entries.where((e) => e.photo.info?.location == null).length}장',
+                style: const TextStyle(color: AppColors.textMuted),
+              ),
+            ),
+            Expanded(child: _body(entries)),
           ],
         );
       },
     );
   }
 
-  Widget _sourceTile(PhotoSource source, bool enabled) {
-    final count = _store.photosOf(source.id).length;
-    final kind = switch (source.kind) {
-      PhotoSourceKind.folder => '폴더',
-      PhotoSourceKind.mediaFolder => '휴대폰 폴더',
+  Widget _body(List<PhotoEntry> entries) {
+    if (_setup.store.sources.isEmpty) {
+      return Center(
+        child: TextButton.icon(
+          onPressed: _openSources,
+          icon: const Icon(Icons.add),
+          label: const Text('사진 출처를 추가하세요'),
+        ),
+      );
+    }
+    if (entries.isEmpty) {
+      return const Center(
+        child: Text(
+          '조건에 맞는 사진이 없습니다',
+          style: TextStyle(color: AppColors.textMuted),
+        ),
+      );
+    }
+    return switch (_view) {
+      _View.list => PhotoListView(
+        entries: entries,
+        thumbnails: _setup.thumbnails,
+        onOpen: _open,
+      ),
+      _View.map => PhotoMapView(
+        // 조건이 바뀌면 찾은 사진에 맞춰 화면을 다시 맞춘다.
+        key: ObjectKey(_filter.value),
+        entries: entries,
+        thumbnails: _setup.thumbnails,
+        onOpen: _open,
+        tiles: _setup.mapTiles,
+      ),
     };
-    final indexedAt = source.indexedAt?.toLocal();
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(
-        source.kind == PhotoSourceKind.folder
-            ? Icons.folder_outlined
-            : Icons.phone_android_outlined,
-      ),
-      title: Text(source.name, overflow: TextOverflow.ellipsis),
-      subtitle: Text(
-        indexedAt == null
-            ? '$kind · 아직 읽지 않음'
-            : '$kind · $count장 · ${_date(indexedAt)} 읽음',
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: IconButton(
-        tooltip: '목록에서 빼기',
-        onPressed: enabled ? () => _remove(source) : null,
-        icon: const Icon(Icons.remove_circle_outline),
-      ),
-    );
   }
 
-  Widget _locationNotice() {
-    final allow = widget.setup.allowLocation;
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceRaised,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-      ),
-      child: Row(
-        children: [
-          const Expanded(
-            child: Text(
-              '사진 위치 접근이 허용되지 않아 위치를 읽을 수 없습니다. '
-              '허용한 뒤 새 사진 읽기를 다시 누르세요.',
-            ),
-          ),
-          if (allow != null)
-            TextButton(onPressed: allow, child: const Text('허용')),
+  /// "모든 연도" 메뉴 값. 메뉴는 null 값을 닫기로 처리하므로 쓰지 않는 연도로 나타낸다.
+  static const _allYears = 0;
+
+  Widget _yearMenu(PhotoFilter filter, PhotoFacets facets) =>
+      PopupMenuButton<int>(
+        tooltip: '연도',
+        onSelected: (year) => _update(
+          (f) => f.copyWith(year: () => year == _allYears ? null : year),
+        ),
+        itemBuilder: (_) => [
+          const PopupMenuItem(value: _allYears, child: Text('모든 연도')),
+          for (final year in facets.years)
+            PopupMenuItem(value: year, child: Text('$year년')),
         ],
+        child: Chip(
+          avatar: const Icon(Icons.event, size: 18),
+          label: Text(filter.year == null ? '연도' : '${filter.year}년'),
+        ),
+      );
+
+  Widget _regionMenu(PhotoFilter filter, PhotoFacets facets) {
+    final (choices, pick) = switch (filter) {
+      PhotoFilter(country: null) => (
+        facets.countries,
+        (String v) => _update((f) => f.copyWith(country: () => v)),
+      ),
+      PhotoFilter(admin: null) => (
+        facets.admins,
+        (String v) => _update((f) => f.copyWith(admin: () => v)),
+      ),
+      PhotoFilter(locality: null) => (
+        facets.localities,
+        (String v) => _update((f) => f.copyWith(locality: () => v)),
+      ),
+      _ => (const <String>[], (String _) {}),
+    };
+    final label = [?filter.country, ?filter.admin, ?filter.locality];
+    return PopupMenuButton<String>(
+      tooltip: '지역',
+      onSelected: (value) {
+        if (value.isEmpty) {
+          _update(
+            (f) => f.copyWith(
+              country: () => null,
+              admin: () => null,
+              locality: () => null,
+            ),
+          );
+        } else {
+          pick(value);
+        }
+      },
+      itemBuilder: (_) => [
+        for (final choice in choices)
+          PopupMenuItem(value: choice, child: Text(choice)),
+        if (filter.country != null)
+          const PopupMenuItem(value: '', child: Text('지역 해제')),
+      ],
+      child: Chip(
+        avatar: const Icon(Icons.place_outlined, size: 18),
+        label: Text(label.isEmpty ? '지역' : label.join(' › ')),
       ),
     );
   }
-
-  /// 한 폴더가 다른 폴더 안에 있으면 같은 사진을 두 번 색인하므로 겹친다고 본다.
-  static bool _overlaps(String a, String b) {
-    // 휴대폰 폴더의 빈 경로는 내부 저장소 전체다.
-    if (a.isEmpty || b.isEmpty) return true;
-    String folder(String path) => path.endsWith('/') ? path : '$path/';
-    return folder(a).startsWith(folder(b)) || folder(b).startsWith(folder(a));
-  }
-
-  static String _date(DateTime t) =>
-      '${t.year}-${t.month.toString().padLeft(2, '0')}-'
-      '${t.day.toString().padLeft(2, '0')} '
-      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 }

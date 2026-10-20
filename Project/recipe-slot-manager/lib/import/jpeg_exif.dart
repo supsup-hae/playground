@@ -134,6 +134,29 @@ Exif readExif(Uint8List jpeg) {
   throw const ImportException('사진에 EXIF 정보가 없습니다');
 }
 
+/// JPEG 앞부분에서 EXIF 썸네일(IFD1 의 JPEG)을 꺼낸다. 없거나, JPEG 이 아니거나, 앞부분에
+/// 다 들어 있지 않으면 null.
+Uint8List? readExifThumbnail(Uint8List jpeg) {
+  try {
+    final Exif(:tiff, :view, :endian) = readExif(jpeg);
+    final ifd0At = view.getUint32(4, endian);
+    final next = ifd0At + 2 + 12 * view.getUint16(ifd0At, endian);
+    if (next + 4 > view.lengthInBytes) return null;
+    final ifd1At = view.getUint32(next, endian);
+    if (ifd1At == 0) return null;
+    final ifd1 = readIfd(view, ifd1At, endian);
+    final (start, length) = (ifd1[0x0201], ifd1[0x0202]);
+    if (start == null || length == null) return null;
+    final from = ifdValues(view, start, endian).first;
+    final to = from + ifdValues(view, length, endian).first;
+    if (to > tiff.length || to - from < 2) return null;
+    final bytes = Uint8List.sublistView(tiff, from, to);
+    return bytes[0] == 0xFF && bytes[1] == 0xD8 ? bytes : null;
+  } on ImportException {
+    return null;
+  }
+}
+
 /// JPEG 앞부분에서 MakerNote(0x927C) 바이트를 꺼낸다.
 Uint8List readMakerNote(Uint8List jpeg) {
   final Exif(:tiff, :exif) = readExif(jpeg);
