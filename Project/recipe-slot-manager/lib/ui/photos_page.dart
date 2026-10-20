@@ -90,143 +90,156 @@ class _PhotosPageState extends State<PhotosPage> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.md,
-                AppSpacing.sm,
-                0,
-              ),
-              child: Row(
-                children: [
-                  SegmentedButton<_View>(
-                    segments: const [
-                      ButtonSegment(
-                        value: _View.list,
-                        icon: Icon(Icons.grid_view),
-                        label: Text('목록'),
-                      ),
-                      ButtonSegment(
-                        value: _View.map,
-                        icon: Icon(Icons.map_outlined),
-                        label: Text('지도'),
-                      ),
-                      ButtonSegment(
-                        value: _View.logs,
-                        icon: Icon(Icons.history),
-                        label: Text('기록'),
-                      ),
-                    ],
-                    selected: {_view},
-                    onSelectionChanged: (s) => setState(() => _view = s.first),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    tooltip: '사진 출처',
-                    onPressed: _openSources,
-                    icon: const Icon(Icons.folder_open_outlined),
-                  ),
-                ],
-              ),
-            ),
-            if (progress != null) ...[
-              LinearProgressIndicator(
-                value: progress.total == 0
-                    ? null
-                    : progress.done / progress.total,
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                child: Text(
-                  '${progress.name} ${progress.done} / ${progress.total}',
-                  style: const TextStyle(color: AppColors.textMuted),
-                ),
-              ),
-            ],
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.sm,
-                AppSpacing.lg,
-                0,
-              ),
-              child: TextField(
-                controller: _search,
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.search),
-                  hintText: showLogs ? '장소·세트·레시피 검색' : '장소·파일·시뮬레이션 검색',
-                  isDense: true,
-                ),
-                onChanged: (text) => _update((f) => f.copyWith(text: text)),
-              ),
-            ),
-            SizedBox(
-              height: 56,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
-                  vertical: AppSpacing.sm,
-                ),
-                children: [
-                  _yearMenu(filter, facets),
-                  const SizedBox(width: AppSpacing.sm),
-                  _regionMenu(filter, facets),
-                  if (_view == _View.map) ...[
-                    const SizedBox(width: AppSpacing.sm),
-                    FilterChip(
-                      label: Text(
-                        '세트 저장 위치 '
-                        '${logEntries.where((e) => e.log.location != null).length}',
-                      ),
-                      selected: _logsOnMap,
-                      onSelected: (on) => setState(() => _logsOnMap = on),
-                    ),
-                  ],
-                  if (!showLogs) ...[
-                    const SizedBox(width: AppSpacing.sm),
-                    FilterChip(
-                      label: Text('위치 없음 $noLocation'),
-                      selected: filter.noLocationOnly,
-                      onSelected: (on) =>
-                          _update((f) => f.copyWith(noLocationOnly: on)),
-                    ),
-                  ],
-                  for (final MapEntry(key: code, value: count)
-                      in facets.films.entries) ...[
-                    const SizedBox(width: AppSpacing.sm),
-                    FilterChip(
-                      label: Text('${filmName(code)} $count'),
-                      selected: filter.films.contains(code),
-                      onSelected: (on) => _update(
-                        (f) => f.copyWith(
-                          films: on
-                              ? {...f.films, code}
-                              : ({...f.films}..remove(code)),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              child: Text(
-                showLogs
-                    ? '기록 ${logEntries.length}개 · 위치 없음 '
-                          '${logEntries.where((e) => e.log.location == null).length}개'
-                    : '${entries.length}장 · 위치 없음 '
-                          '${entries.where((e) => e.photo.info?.location == null).length}장',
-                style: const TextStyle(color: AppColors.textMuted),
-              ),
-            ),
+            _toolbar(),
+            if (progress != null) ..._progress(progress),
+            _searchField(showLogs),
+            _filterRow(filter, facets, logEntries, noLocation),
+            _countLine(entries, logEntries),
             Expanded(child: _body(entries, logEntries)),
           ],
         );
       },
     );
   }
+
+  Widget _toolbar() => Padding(
+    padding: const EdgeInsets.fromLTRB(
+      AppSpacing.lg,
+      AppSpacing.md,
+      AppSpacing.sm,
+      0,
+    ),
+    child: Row(
+      children: [
+        SegmentedButton<_View>(
+          segments: const [
+            ButtonSegment(
+              value: _View.list,
+              icon: Icon(Icons.grid_view),
+              label: Text('목록'),
+            ),
+            ButtonSegment(
+              value: _View.map,
+              icon: Icon(Icons.map_outlined),
+              label: Text('지도'),
+            ),
+            ButtonSegment(
+              value: _View.logs,
+              icon: Icon(Icons.history),
+              label: Text('기록'),
+            ),
+          ],
+          selected: {_view},
+          onSelectionChanged: (s) => setState(() => _view = s.first),
+        ),
+        const Spacer(),
+        IconButton(
+          tooltip: '사진 출처',
+          onPressed: _openSources,
+          icon: const Icon(Icons.folder_open_outlined),
+        ),
+      ],
+    ),
+  );
+
+  List<Widget> _progress(({String name, int done, int total}) progress) => [
+    LinearProgressIndicator(
+      value: progress.total == 0 ? null : progress.done / progress.total,
+    ),
+    Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      child: Text(
+        '${progress.name} ${progress.done} / ${progress.total}',
+        style: const TextStyle(color: AppColors.textMuted),
+      ),
+    ),
+  ];
+
+  Widget _searchField(bool showLogs) => Padding(
+    padding: const EdgeInsets.fromLTRB(
+      AppSpacing.lg,
+      AppSpacing.sm,
+      AppSpacing.lg,
+      0,
+    ),
+    child: TextField(
+      controller: _search,
+      decoration: InputDecoration(
+        prefixIcon: const Icon(Icons.search),
+        hintText: showLogs ? '장소·세트·레시피 검색' : '장소·파일·시뮬레이션 검색',
+        isDense: true,
+      ),
+      onChanged: (text) => _update((f) => f.copyWith(text: text)),
+    ),
+  );
+
+  /// 연도·지역 메뉴와 칩. 지도에서는 기록 겹치기 칩, 기록 보기에서는 사진 전용 칩을 숨긴다.
+  Widget _filterRow(
+    PhotoFilter filter,
+    PhotoFacets facets,
+    List<PlaceLogEntry> logs,
+    int noLocation,
+  ) => SizedBox(
+    height: 56,
+    child: ListView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.sm,
+      ),
+      children: [
+        _yearMenu(filter, facets),
+        const SizedBox(width: AppSpacing.sm),
+        _regionMenu(filter, facets),
+        if (_view == _View.map) ...[
+          const SizedBox(width: AppSpacing.sm),
+          FilterChip(
+            label: Text(
+              '세트 저장 위치 ${logs.where((e) => e.log.location != null).length}',
+            ),
+            selected: _logsOnMap,
+            onSelected: (on) => setState(() => _logsOnMap = on),
+          ),
+        ],
+        if (_view != _View.logs) ...[
+          const SizedBox(width: AppSpacing.sm),
+          FilterChip(
+            label: Text('위치 없음 $noLocation'),
+            selected: filter.noLocationOnly,
+            onSelected: (on) => _update((f) => f.copyWith(noLocationOnly: on)),
+          ),
+        ],
+        for (final MapEntry(key: code, value: count)
+            in facets.films.entries) ...[
+          const SizedBox(width: AppSpacing.sm),
+          FilterChip(
+            label: Text('${filmName(code)} $count'),
+            selected: filter.films.contains(code),
+            onSelected: (on) => _update(
+              (f) => f.copyWith(
+                films: on ? {...f.films, code} : ({...f.films}..remove(code)),
+              ),
+            ),
+          ),
+        ],
+      ],
+    ),
+  );
+
+  Widget _countLine(
+    List<PhotoEntry> entries,
+    List<PlaceLogEntry> logs,
+  ) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+    child: Text(
+      _view == _View.logs
+          ? '기록 ${logs.length}개 · 위치 없음 '
+                '${logs.where((e) => e.log.location == null).length}개'
+          : '${entries.length}장 · 위치 없음 '
+                '${entries.where((e) => e.photo.info?.location == null).length}장',
+      style: const TextStyle(color: AppColors.textMuted),
+    ),
+  );
 
   Widget _body(List<PhotoEntry> entries, List<PlaceLogEntry> logs) {
     if (_view == _View.logs) {
@@ -249,23 +262,22 @@ class _PhotosPageState extends State<PhotosPage> {
     if (entries.isEmpty && (_view == _View.list || mapLogs.isEmpty)) {
       return const _Message('조건에 맞는 사진이 없습니다');
     }
-    return switch (_view) {
-      _View.list => PhotoListView(
+    if (_view == _View.list) {
+      return PhotoListView(
         entries: entries,
         thumbnails: _setup.thumbnails,
         onOpen: _open,
-      ),
-      _View.map => PhotoMapView(
-        // 조건이나 기록 겹치기가 바뀌면 찾은 점에 맞춰 화면을 다시 맞춘다.
-        key: ValueKey((_filter.value, _logsOnMap)),
-        entries: entries,
-        logs: mapLogs,
-        thumbnails: _setup.thumbnails,
-        onOpen: _open,
-        tiles: _setup.mapTiles,
-      ),
-      _View.logs => throw StateError('기록 보기는 위에서 처리한다'),
-    };
+      );
+    }
+    return PhotoMapView(
+      // 조건이나 기록 겹치기가 바뀌면 찾은 점에 맞춰 화면을 다시 맞춘다.
+      key: ValueKey((_filter.value, _logsOnMap)),
+      entries: entries,
+      logs: mapLogs,
+      thumbnails: _setup.thumbnails,
+      onOpen: _open,
+      tiles: _setup.mapTiles,
+    );
   }
 
   /// "모든 연도" 메뉴 값. 메뉴는 null 값을 닫기로 처리하므로 쓰지 않는 연도로 나타낸다.
