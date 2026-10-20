@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:recipe_slot_manager/photo/photo_source.dart';
-import 'package:recipe_slot_manager/ui/photos_page.dart';
+import 'package:recipe_slot_manager/ui/photo_sources_panel.dart';
 
 import '../support/fake_photo_reader.dart';
 import '../support/test_app.dart';
@@ -29,7 +29,7 @@ void main() {
   }) => app.pumpPage(
     tester,
     Scaffold(
-      body: PhotosPage(
+      body: PhotoSourcesPanel(
         setup: app.photos(
           addSource: (_) async => picked,
           allowLocation: allowLocation,
@@ -117,7 +117,7 @@ void main() {
 
       expect(app.photoStore.sources.map((s) => s.id), ['old'], reason: picked);
       expect(find.text('이미 추가한 폴더와 겹칩니다'), findsOneWidget);
-      ScaffoldMessenger.of(tester.element(find.byType(PhotosPage)))
+      ScaffoldMessenger.of(tester.element(find.byType(PhotoSourcesPanel)))
           .removeCurrentSnackBar();
       await tester.pumpAndSettle();
     }

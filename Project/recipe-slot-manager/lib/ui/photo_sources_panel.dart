@@ -1,30 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:recipe_slot_manager/design/tokens.dart';
 import 'package:recipe_slot_manager/photo/photo_index_store.dart';
-import 'package:recipe_slot_manager/photo/photo_indexer.dart';
 import 'package:recipe_slot_manager/photo/photo_source.dart';
 import 'package:recipe_slot_manager/recipe/recipe_fields.dart';
+import 'package:recipe_slot_manager/ui/photos_setup.dart';
 
-/// 사진 화면에 필요한 것. [addSource] 는 플랫폼마다 다르다(macOS 폴더 고르기, Android 시스템
-/// 폴더 선택 창). [allowLocation] 은 Android 에서 사진 위치 권한을 다시 요청한다.
-typedef PhotosSetup = ({
-  PhotoIndexStore store,
-  PhotoIndexer indexer,
-  Future<PhotoSource?> Function(BuildContext context) addSource,
-  Future<void> Function()? allowLocation,
-});
-
-/// 사진 출처 등록, 새 사진 읽기, 색인 요약.
-class PhotosPage extends StatefulWidget {
-  const PhotosPage({super.key, required this.setup});
+/// 사진 출처 등록, 새 사진 읽기, 색인 요약. 사진 탭의 "출처" 시트에 보인다.
+class PhotoSourcesPanel extends StatefulWidget {
+  const PhotoSourcesPanel({super.key, required this.setup});
 
   final PhotosSetup setup;
 
   @override
-  State<PhotosPage> createState() => _PhotosPageState();
+  State<PhotoSourcesPanel> createState() => _PhotoSourcesPanelState();
 }
 
-class _PhotosPageState extends State<PhotosPage> {
+class _PhotoSourcesPanelState extends State<PhotoSourcesPanel> {
   PhotoIndexStore get _store => widget.setup.store;
 
   void _tell(String message) =>

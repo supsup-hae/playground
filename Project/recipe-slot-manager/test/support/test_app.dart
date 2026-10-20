@@ -11,11 +11,14 @@ import 'package:recipe_slot_manager/design/app_theme.dart';
 import 'package:recipe_slot_manager/library/library_store.dart';
 import 'package:recipe_slot_manager/photo/photo_index_store.dart';
 import 'package:recipe_slot_manager/photo/photo_indexer.dart';
+import 'package:recipe_slot_manager/photo/photo_query.dart';
 import 'package:recipe_slot_manager/photo/photo_source.dart';
+import 'package:recipe_slot_manager/photo/place_store.dart';
 import 'package:recipe_slot_manager/ptp/ptp_codes.dart';
 import 'package:recipe_slot_manager/ptp/ptp_string.dart';
 import 'package:recipe_slot_manager/ui/app_shell.dart';
-import 'package:recipe_slot_manager/ui/photos_page.dart';
+import 'package:recipe_slot_manager/ui/photo_thumbnail.dart';
+import 'package:recipe_slot_manager/ui/photos_setup.dart';
 
 import 'fake_photo_reader.dart';
 import 'fake_ptp_transport.dart';
@@ -57,22 +60,35 @@ class TestApp {
   /// 모든 출처(폴더)를 읽는 가짜 출처.
   final photoReader = FakePhotoReader();
 
-  /// 사진 화면 준비. [addSource] 가 없으면 출처를 고르지 않은 것으로 본다.
+  late final PlaceStore placeStore = PlaceStore(
+    Directory(p.join(root.path, 'photos')),
+  );
+
+  /// 찾기 조건. 셸처럼 시험 하나 동안 같은 것을 쓴다.
+  final photoFilter = ValueNotifier(const PhotoFilter());
+
+  late final photoIndexer = PhotoIndexer(
+    photoStore,
+    readers: {
+      PhotoSourceKind.folder: photoReader,
+      PhotoSourceKind.mediaFolder: photoReader,
+    },
+    log: session.log,
+  );
+
+  /// 사진 화면 준비. [addSource] 가 없으면 출처를 고르지 않은 것으로 본다. 지도 타일은 받지 않는다.
   PhotosSetup photos({
     Future<PhotoSource?> Function(BuildContext context)? addSource,
     Future<void> Function()? allowLocation,
   }) => (
     store: photoStore,
-    indexer: PhotoIndexer(
-      photoStore,
-      readers: {
-        PhotoSourceKind.folder: photoReader,
-        PhotoSourceKind.mediaFolder: photoReader,
-      },
-      log: session.log,
-    ),
+    indexer: photoIndexer,
+    places: placeStore,
+    thumbnails: PhotoThumbnails(photoIndexer),
+    filter: photoFilter,
     addSource: addSource ?? (_) async => null,
     allowLocation: allowLocation,
+    mapTiles: false,
   );
 
   void dispose() => root.deleteSync(recursive: true);
