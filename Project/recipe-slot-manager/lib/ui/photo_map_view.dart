@@ -5,8 +5,10 @@ import 'package:recipe_slot_manager/design/tokens.dart';
 import 'package:recipe_slot_manager/photo/map_clusters.dart';
 import 'package:recipe_slot_manager/photo/photo_query.dart';
 import 'package:recipe_slot_manager/ui/photo_thumbnail.dart';
+import 'package:recipe_slot_manager/ui/place_log_list_view.dart';
 
 /// 찾은 사진 중 위치가 있는 것을 OpenStreetMap 위에 묶은 점으로 보인다. 점을 누르면 그 사진들.
+/// 세트 저장 기록([logs])은 묶지 않고 다른 모양의 점으로 겹친다.
 ///
 /// OSM 타일 정책: 앱을 밝히는 User-Agent, 보이는 저작권 표시, 보는 화면의 타일만 받는다.
 class PhotoMapView extends StatefulWidget {
@@ -15,12 +17,14 @@ class PhotoMapView extends StatefulWidget {
     required this.entries,
     required this.thumbnails,
     required this.onOpen,
+    this.logs = const [],
     this.tiles = true,
   });
 
   final List<PhotoEntry> entries;
   final PhotoThumbnails thumbnails;
   final void Function(PhotoEntry entry) onOpen;
+  final List<PlaceLogEntry> logs;
 
   /// 지도 타일을 받는다. 시험에서는 끈다.
   final bool tiles;
@@ -42,6 +46,16 @@ class _PhotoMapViewState extends State<PhotoMapView> {
     final location = e.photo.info!.location!;
     return LatLng(location.latitude, location.longitude);
   }
+
+  void _openLog(PlaceLogEntry entry) => showModalBottomSheet<void>(
+    context: context,
+    builder: (context) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+        child: PlaceLogTile(entry: entry),
+      ),
+    ),
+  );
 
   void _openCluster(List<PhotoEntry> items) {
     if (items.length == 1) return widget.onOpen(items.single);
@@ -76,7 +90,15 @@ class _PhotoMapViewState extends State<PhotoMapView> {
   @override
   Widget build(BuildContext context) {
     final located = _located;
-    final points = [for (final e in located) _latLng(e)];
+    final logs = [
+      for (final e in widget.logs)
+        if (e.log.location case final l?)
+          (entry: e, point: LatLng(l.latitude, l.longitude)),
+    ];
+    final points = [
+      for (final e in located) _latLng(e),
+      for (final l in logs) l.point,
+    ];
     final clusters = clusterPoints(
       located,
       (e) => e.photo.info!.location!,
@@ -123,9 +145,20 @@ class _PhotoMapViewState extends State<PhotoMapView> {
                   onTap: () => _openCluster(cluster.items),
                 ),
               ),
+            for (final (:entry, :point) in logs)
+              Marker(
+                point: point,
+                width: 36,
+                height: 36,
+                child: _LogDot(
+                  key: ValueKey('log-${entry.log.id}'),
+                  name: entry.log.loadoutName,
+                  onTap: () => _openLog(entry),
+                ),
+              ),
           ],
         ),
-        if (located.isEmpty)
+        if (points.isEmpty)
           const Center(
             child: Card(
               child: Padding(
@@ -182,6 +215,37 @@ class _ClusterDot extends StatelessWidget {
               color: AppColors.text,
               fontWeight: FontWeight.w600,
             ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// 세트 저장 기록 점. 사진 묶음(원)과 구별되도록 각진 모양.
+class _LogDot extends StatelessWidget {
+  const _LogDot({super.key, required this.name, required this.onTap});
+
+  final String name;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: '세트 저장: $name',
+    child: GestureDetector(
+      onTap: onTap,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: AppColors.accent, width: 2),
+        ),
+        child: const Center(
+          child: Icon(
+            Icons.view_week_outlined,
+            size: 18,
+            color: AppColors.text,
           ),
         ),
       ),

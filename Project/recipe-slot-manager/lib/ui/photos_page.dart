@@ -7,10 +7,12 @@ import 'package:recipe_slot_manager/ui/photo_list_view.dart';
 import 'package:recipe_slot_manager/ui/photo_map_view.dart';
 import 'package:recipe_slot_manager/ui/photo_sources_panel.dart';
 import 'package:recipe_slot_manager/ui/photos_setup.dart';
+import 'package:recipe_slot_manager/ui/place_log_list_view.dart';
 
-enum _View { list, map }
+enum _View { list, map, logs }
 
-/// 사진 찾기: 목록·지도 전환, 검색어, 연도·지역·위치 없음·필름 시뮬레이션 필터.
+/// 사진 찾기: 목록·지도·기록 전환, 검색어, 연도·지역·위치 없음·필름 시뮬레이션 필터.
+/// 기록은 세트 저장 기록이며 연도·지역·검색어만 쓴다. 지도에는 기록 점을 겹칠 수 있다.
 /// 출처 관리는 오른쪽 위 버튼의 시트에 있다.
 class PhotosPage extends StatefulWidget {
   const PhotosPage({super.key, required this.setup, required this.library});
@@ -24,6 +26,7 @@ class PhotosPage extends StatefulWidget {
 
 class _PhotosPageState extends State<PhotosPage> {
   var _view = _View.list;
+  var _logsOnMap = false;
   late final _search = TextEditingController(text: _filter.value.text);
 
   PhotosSetup get _setup => widget.setup;
@@ -67,13 +70,19 @@ class _PhotosPageState extends State<PhotosPage> {
         _setup.store,
         _setup.places,
         _setup.indexer,
+        _setup.logs,
         _filter,
       ]),
       builder: (context, _) {
         final filter = _filter.value;
         final photos = _setup.store.photos;
+        final logs = _setup.logs.logs;
+        final showLogs = _view == _View.logs;
         final entries = queryPhotos(photos, _setup.places, filter);
-        final facets = photoFacets(photos, _setup.places, filter);
+        final logEntries = queryPlaceLogs(logs, _setup.places, filter);
+        final facets = showLogs
+            ? placeLogFacets(logs, _setup.places, filter)
+            : photoFacets(photos, _setup.places, filter);
         final noLocation = photos
             .where((p) => p.info != null && p.info!.location == null)
             .length;
@@ -101,6 +110,11 @@ class _PhotosPageState extends State<PhotosPage> {
                         value: _View.map,
                         icon: Icon(Icons.map_outlined),
                         label: Text('지도'),
+                      ),
+                      ButtonSegment(
+                        value: _View.logs,
+                        icon: Icon(Icons.history),
+                        label: Text('기록'),
                       ),
                     ],
                     selected: {_view},
@@ -138,9 +152,9 @@ class _PhotosPageState extends State<PhotosPage> {
               ),
               child: TextField(
                 controller: _search,
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.search),
-                  hintText: '장소·파일·시뮬레이션 검색',
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.search),
+                  hintText: showLogs ? '장소·세트·레시피 검색' : '장소·파일·시뮬레이션 검색',
                   isDense: true,
                 ),
                 onChanged: (text) => _update((f) => f.copyWith(text: text)),
@@ -158,13 +172,26 @@ class _PhotosPageState extends State<PhotosPage> {
                   _yearMenu(filter, facets),
                   const SizedBox(width: AppSpacing.sm),
                   _regionMenu(filter, facets),
-                  const SizedBox(width: AppSpacing.sm),
-                  FilterChip(
-                    label: Text('위치 없음 $noLocation'),
-                    selected: filter.noLocationOnly,
-                    onSelected: (on) =>
-                        _update((f) => f.copyWith(noLocationOnly: on)),
-                  ),
+                  if (_view == _View.map) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    FilterChip(
+                      label: Text(
+                        '세트 저장 위치 '
+                        '${logEntries.where((e) => e.log.location != null).length}',
+                      ),
+                      selected: _logsOnMap,
+                      onSelected: (on) => setState(() => _logsOnMap = on),
+                    ),
+                  ],
+                  if (!showLogs) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    FilterChip(
+                      label: Text('위치 없음 $noLocation'),
+                      selected: filter.noLocationOnly,
+                      onSelected: (on) =>
+                          _update((f) => f.copyWith(noLocationOnly: on)),
+                    ),
+                  ],
                   for (final MapEntry(key: code, value: count)
                       in facets.films.entries) ...[
                     const SizedBox(width: AppSpacing.sm),
@@ -186,19 +213,29 @@ class _PhotosPageState extends State<PhotosPage> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: Text(
-                '${entries.length}장 · 위치 없음 '
-                '${entries.where((e) => e.photo.info?.location == null).length}장',
+                showLogs
+                    ? '기록 ${logEntries.length}개 · 위치 없음 '
+                          '${logEntries.where((e) => e.log.location == null).length}개'
+                    : '${entries.length}장 · 위치 없음 '
+                          '${entries.where((e) => e.photo.info?.location == null).length}장',
                 style: const TextStyle(color: AppColors.textMuted),
               ),
             ),
-            Expanded(child: _body(entries)),
+            Expanded(child: _body(entries, logEntries)),
           ],
         );
       },
     );
   }
 
-  Widget _body(List<PhotoEntry> entries) {
+  Widget _body(List<PhotoEntry> entries, List<PlaceLogEntry> logs) {
+    if (_view == _View.logs) {
+      if (_setup.logs.logs.isEmpty) {
+        return const _Message('세트를 카메라에 저장하면 여기에 기록됩니다');
+      }
+      if (logs.isEmpty) return const _Message('조건에 맞는 기록이 없습니다');
+      return PlaceLogListView(entries: logs);
+    }
     if (_setup.store.sources.isEmpty) {
       return Center(
         child: TextButton.icon(
@@ -208,13 +245,9 @@ class _PhotosPageState extends State<PhotosPage> {
         ),
       );
     }
-    if (entries.isEmpty) {
-      return const Center(
-        child: Text(
-          '조건에 맞는 사진이 없습니다',
-          style: TextStyle(color: AppColors.textMuted),
-        ),
-      );
+    final mapLogs = _logsOnMap ? logs : const <PlaceLogEntry>[];
+    if (entries.isEmpty && (_view == _View.list || mapLogs.isEmpty)) {
+      return const _Message('조건에 맞는 사진이 없습니다');
     }
     return switch (_view) {
       _View.list => PhotoListView(
@@ -223,13 +256,15 @@ class _PhotosPageState extends State<PhotosPage> {
         onOpen: _open,
       ),
       _View.map => PhotoMapView(
-        // 조건이 바뀌면 찾은 사진에 맞춰 화면을 다시 맞춘다.
-        key: ObjectKey(_filter.value),
+        // 조건이나 기록 겹치기가 바뀌면 찾은 점에 맞춰 화면을 다시 맞춘다.
+        key: ValueKey((_filter.value, _logsOnMap)),
         entries: entries,
+        logs: mapLogs,
         thumbnails: _setup.thumbnails,
         onOpen: _open,
         tiles: _setup.mapTiles,
       ),
+      _View.logs => throw StateError('기록 보기는 위에서 처리한다'),
     };
   }
 
@@ -297,4 +332,15 @@ class _PhotosPageState extends State<PhotosPage> {
       ),
     );
   }
+}
+
+class _Message extends StatelessWidget {
+  const _Message(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Text(text, style: const TextStyle(color: AppColors.textMuted)),
+  );
 }

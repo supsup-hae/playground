@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:recipe_slot_manager/photo/photo_info.dart';
+import 'package:recipe_slot_manager/photo/photo_query.dart';
 import 'package:recipe_slot_manager/photo/photo_source.dart';
 import 'package:recipe_slot_manager/photo/place.dart';
+import 'package:recipe_slot_manager/photo/place_log.dart';
 import 'package:recipe_slot_manager/ui/photo_detail_page.dart';
 import 'package:recipe_slot_manager/ui/photo_sources_panel.dart';
 import 'package:recipe_slot_manager/ui/photos_page.dart';
@@ -93,6 +95,41 @@ void main() {
     );
   });
 
+  Future<void> seedLogs(WidgetTester tester) => tester.runAsync(() async {
+    await app.placeLogStore.add(
+      PlaceLog(
+        id: 'tokyo',
+        loggedAt: DateTime.utc(2025, 10, 12, 6),
+        utcOffset: const Duration(hours: 9),
+        location: shibuya,
+        accuracy: 12,
+        loadoutId: 'l1',
+        loadoutName: '도쿄 밤',
+        slots: ['Eterna 밤', null, null, null, null, null, 'Classic Neg.'],
+      ),
+    );
+    await app.placeLogStore.add(
+      PlaceLog(
+        id: 'home',
+        loggedAt: DateTime.utc(2026, 3, 1),
+        utcOffset: const Duration(hours: 9),
+        loadoutId: 'l2',
+        loadoutName: '아침 산책',
+        slots: List.filled(7, null),
+        missingReason: '위치 권한이 없습니다',
+      ),
+    );
+    await app.placeStore.save(
+      placeKey(shibuya),
+      const Place(
+        country: '일본',
+        admin: '도쿄도',
+        locality: '시부야구',
+        subLocality: '진난',
+      ),
+    );
+  });
+
   setUp(() => app = TestApp());
   tearDown(() => app.dispose());
 
@@ -100,8 +137,11 @@ void main() {
     WidgetTester tester, {
     Size size = TestApp.largeWindow,
     PhotoSource? picked,
+    bool photos = true,
+    bool logs = false,
   }) async {
-    await seed(tester);
+    if (photos) await seed(tester);
+    if (logs) await seedLogs(tester);
     await app.pumpPage(
       tester,
       Scaffold(
@@ -116,6 +156,78 @@ void main() {
   }
 
   Finder countText(String text) => find.text(text);
+
+  group('기록 보기', () {
+    testWidgets('세트 저장 기록을 날짜별 최신순으로, 장소·세트·레시피 이름과 함께 보인다', (tester) async {
+      await pumpPhotos(tester, logs: true);
+
+      await tester.tap(find.text('기록'));
+      await tester.pumpAndSettle();
+
+      expect(countText('기록 2개 · 위치 없음 1개'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('2026-03-01')).dy,
+        lessThan(tester.getTopLeft(find.text('2025-10-12')).dy),
+      );
+      expect(find.text('15:00 · 도쿄 밤'), findsOneWidget);
+      expect(find.text('일본 도쿄도 시부야구 진난 (약 12 m)'), findsOneWidget);
+      expect(find.text('C1 Eterna 밤 · C7 Classic Neg.'), findsOneWidget);
+      expect(find.text('09:00 · 아침 산책'), findsOneWidget);
+      expect(find.text('위치 없음 (위치 권한이 없습니다)'), findsOneWidget);
+      expect(
+        find.widgetWithText(FilterChip, 'Eterna 3'),
+        findsNothing,
+        reason: '필름 시뮬레이션은 사진에만 쓰는 조건',
+      );
+    });
+
+    testWidgets('검색어와 지역 조건을 기록에도 쓴다', (tester) async {
+      await pumpPhotos(tester, logs: true);
+      await tester.tap(find.text('기록'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '산책');
+      await tester.pumpAndSettle();
+      expect(countText('기록 1개 · 위치 없음 1개'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), '');
+      app.photoFilter.value = const PhotoFilter(country: '일본');
+      await tester.pumpAndSettle();
+      expect(find.text('15:00 · 도쿄 밤'), findsOneWidget);
+      expect(find.text('09:00 · 아침 산책'), findsNothing);
+    });
+
+    testWidgets('사진 출처가 없어도 기록을 보이고, 기록이 없으면 안내한다', (tester) async {
+      await pumpPhotos(tester, photos: false);
+      await tester.tap(find.text('기록'));
+      await tester.pumpAndSettle();
+      expect(find.text('세트를 카메라에 저장하면 여기에 기록됩니다'), findsOneWidget);
+
+      await seedLogs(tester);
+      await tester.pumpAndSettle();
+      expect(find.text('15:00 · 도쿄 밤'), findsOneWidget);
+    });
+
+    testWidgets('지도에서 세트 저장 위치를 켜면 기록 점이 보이고, 누르면 그 기록', (tester) async {
+      await pumpPhotos(tester, logs: true);
+      await tester.tap(find.text('지도'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('log-tokyo')), findsNothing);
+
+      await tester.tap(find.widgetWithText(FilterChip, '세트 저장 위치 1'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('log-tokyo')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byType(BottomSheet),
+          matching: find.text('15:00 · 도쿄 밤'),
+        ),
+        findsOneWidget,
+      );
+    });
+  });
 
   testWidgets('목록은 날짜별로 최신순, 날짜 줄에 장소 이름을 보인다', (tester) async {
     await pumpPhotos(tester);
@@ -312,12 +424,16 @@ void main() {
 
   for (final size in const [Size(360, 800), Size(412, 915), Size(915, 412)]) {
     testWidgets('휴대폰 크기 $size 에서 목록·지도·상세가 넘치지 않는다', (tester) async {
-      await pumpPhotos(tester, size: size);
+      await pumpPhotos(tester, size: size, logs: true);
       expect(tester.takeException(), isNull, reason: '목록');
 
       await tester.tap(find.text('지도'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull, reason: '지도');
+
+      await tester.tap(find.text('기록'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: '기록');
 
       await tester.tap(find.text('목록'));
       await tester.pumpAndSettle();

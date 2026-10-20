@@ -7,6 +7,8 @@ import 'package:recipe_slot_manager/photo/photo_index_store.dart';
 import 'package:recipe_slot_manager/photo/photo_info.dart';
 import 'package:recipe_slot_manager/photo/photo_source.dart';
 import 'package:recipe_slot_manager/photo/place.dart';
+import 'package:recipe_slot_manager/photo/place_log.dart';
+import 'package:recipe_slot_manager/photo/place_log_store.dart';
 import 'package:recipe_slot_manager/photo/place_resolver.dart';
 import 'package:recipe_slot_manager/photo/place_store.dart';
 
@@ -16,6 +18,7 @@ void main() {
   late Directory root;
   late PhotoIndexStore photos;
   late PlaceStore places;
+  late PlaceLogStore logs;
   late FakeGeocoder geocoder;
   late CameraLog log;
   late List<Duration> waits;
@@ -44,6 +47,7 @@ void main() {
     root = Directory.systemTemp.createTempSync('place_resolver_test');
     photos = PhotoIndexStore(Directory('${root.path}/photos'));
     places = PlaceStore(Directory('${root.path}/places'));
+    logs = PlaceLogStore(Directory('${root.path}/places'));
     geocoder = FakeGeocoder();
     log = CameraLog();
     waits = [];
@@ -52,6 +56,7 @@ void main() {
       places: places,
       geocoder: geocoder,
       log: log,
+      logs: logs,
       wait: (d) async => waits.add(d),
     );
   });
@@ -145,5 +150,34 @@ void main() {
 
     expect((result.resolved, result.remaining), (0, 0));
     expect(log.entries, isEmpty);
+  });
+
+  test('세트 저장 기록의 좌표도 묻는다', () async {
+    await logs.add(
+      PlaceLog(
+        id: 'log-1',
+        loggedAt: DateTime.utc(2026, 10, 20),
+        utcOffset: Duration.zero,
+        location: (latitude: 5.0, longitude: 5.0),
+        loadoutId: 'loadout-1',
+        loadoutName: '세트',
+        slots: List.filled(7, null),
+      ),
+    );
+
+    await resolver.resolveMissing();
+
+    expect(geocoder.requests.single, (latitude: 5.0, longitude: 5.0));
+  });
+
+  test('겹쳐 부르면 앞 호출이 끝난 뒤 돌아 같은 좌표를 두 번 묻지 않는다', () async {
+    await putPhotos([
+      (latitude: 1.0, longitude: 1.0),
+      (latitude: 2.0, longitude: 2.0),
+    ]);
+
+    await Future.wait([resolver.resolveMissing(), resolver.resolveMissing()]);
+
+    expect(geocoder.requests, hasLength(2));
   });
 }

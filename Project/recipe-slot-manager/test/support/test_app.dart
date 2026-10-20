@@ -13,6 +13,8 @@ import 'package:recipe_slot_manager/photo/photo_index_store.dart';
 import 'package:recipe_slot_manager/photo/photo_indexer.dart';
 import 'package:recipe_slot_manager/photo/photo_query.dart';
 import 'package:recipe_slot_manager/photo/photo_source.dart';
+import 'package:recipe_slot_manager/photo/place_log_store.dart';
+import 'package:recipe_slot_manager/photo/place_logger.dart';
 import 'package:recipe_slot_manager/photo/place_store.dart';
 import 'package:recipe_slot_manager/ptp/ptp_codes.dart';
 import 'package:recipe_slot_manager/ptp/ptp_string.dart';
@@ -20,6 +22,7 @@ import 'package:recipe_slot_manager/ui/app_shell.dart';
 import 'package:recipe_slot_manager/ui/photo_thumbnail.dart';
 import 'package:recipe_slot_manager/ui/photos_setup.dart';
 
+import 'fake_locator.dart';
 import 'fake_photo_reader.dart';
 import 'fake_ptp_transport.dart';
 
@@ -48,6 +51,9 @@ class TestApp {
       backups,
     );
     photoStore = PhotoIndexStore(Directory(p.join(root.path, 'photos')));
+    // 시험 본문(가짜 시간) 밖에서 만들어야 runAsync 안에서 쓰기를 기다릴 수 있다.
+    placeLogStore = PlaceLogStore(Directory(p.join(root.path, 'photos')));
+    placeStore = PlaceStore(Directory(p.join(root.path, 'photos')));
   }
 
   final Directory root;
@@ -60,8 +66,17 @@ class TestApp {
   /// 모든 출처(폴더)를 읽는 가짜 출처.
   final photoReader = FakePhotoReader();
 
-  late final PlaceStore placeStore = PlaceStore(
-    Directory(p.join(root.path, 'photos')),
+  late final PlaceStore placeStore;
+
+  late final PlaceLogStore placeLogStore;
+
+  /// 위치를 받지 못하는 가짜 위치. 시험에서 [FakeLocator.fix] 를 넣는다.
+  final locator = FakeLocator();
+
+  late final placeLogger = PlaceLogger(
+    store: placeLogStore,
+    locator: locator,
+    log: session.log,
   );
 
   /// 찾기 조건. 셸처럼 시험 하나 동안 같은 것을 쓴다.
@@ -84,6 +99,7 @@ class TestApp {
     store: photoStore,
     indexer: photoIndexer,
     places: placeStore,
+    logs: placeLogStore,
     thumbnails: PhotoThumbnails(photoIndexer),
     filter: photoFilter,
     addSource: addSource ?? (_) async => null,
@@ -117,6 +133,7 @@ class TestApp {
           session: session,
           library: library,
           photos: photos(),
+          placeLogger: placeLogger,
           initialIndex: index,
           headerActions: headerActions,
         ),

@@ -3,6 +3,7 @@ import 'package:recipe_slot_manager/camera/camera_session.dart';
 import 'package:recipe_slot_manager/camera/raw_developer.dart';
 import 'package:recipe_slot_manager/design/tokens.dart';
 import 'package:recipe_slot_manager/library/library_store.dart';
+import 'package:recipe_slot_manager/photo/place_logger.dart';
 import 'package:recipe_slot_manager/ui/design_gallery_page.dart';
 import 'package:recipe_slot_manager/ui/loadout_list_page.dart';
 import 'package:recipe_slot_manager/ui/log_panel.dart';
@@ -39,6 +40,7 @@ class AppShell extends StatefulWidget {
     required this.session,
     required this.library,
     required this.photos,
+    this.placeLogger,
     this.headerActions = const [],
     this.initialIndex = 0,
   });
@@ -46,6 +48,9 @@ class AppShell extends StatefulWidget {
   final CameraSession session;
   final LibraryStore library;
   final PhotosSetup photos;
+
+  /// 세트를 카메라에 저장한 뒤 위치와 세트를 기록한다.
+  final PlaceLogger? placeLogger;
 
   /// 연결 버튼 앞에 놓을 버튼 (동기화 등).
   final List<Widget> headerActions;
@@ -73,7 +78,11 @@ class _AppShellState extends State<AppShell> {
     final shown = compact && !_phoneIndexes.contains(_index) ? 0 : _index;
     final page = switch (shown) {
       0 => RecipeListPage(library: widget.library, session: widget.session),
-      1 => LoadoutListPage(library: widget.library, session: widget.session),
+      1 => LoadoutListPage(
+        library: widget.library,
+        session: widget.session,
+        placeLogger: widget.placeLogger,
+      ),
       2 => SlotsPage(session: widget.session),
       3 => RawPreviewPage(
         session: widget.session,
