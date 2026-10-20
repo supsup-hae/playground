@@ -5,6 +5,7 @@ import 'package:recipe_slot_manager/photo/photo_info.dart';
 import 'package:recipe_slot_manager/photo/photo_query.dart';
 import 'package:recipe_slot_manager/photo/photo_source.dart';
 import 'package:recipe_slot_manager/photo/place.dart';
+import 'package:recipe_slot_manager/photo/place_log.dart';
 import 'package:recipe_slot_manager/photo/place_store.dart';
 
 const eterna = 0x10;
@@ -222,6 +223,99 @@ void main() {
         (eterna, 3),
         (classicNeg, 1),
       ]);
+    });
+  });
+
+  group('세트 저장 기록', () {
+    PlaceLog log(
+      String id, {
+      required DateTime at,
+      Duration offset = Duration.zero,
+      GeoPoint? location,
+      String loadout = '세트',
+      String? slot,
+    }) => PlaceLog(
+      id: id,
+      loggedAt: at,
+      utcOffset: offset,
+      location: location,
+      loadoutId: 'loadout-$id',
+      loadoutName: loadout,
+      slots: [slot, null, null, null, null, null, null],
+    );
+
+    late List<PlaceLog> logs;
+
+    setUp(() {
+      logs = [
+        log('tokyo', at: DateTime.utc(2025, 3, 1), location: shibuya),
+        log('osaka', at: DateTime.utc(2025, 3, 2), location: namba),
+        log('seoul', at: DateTime.utc(2026, 1, 1), location: seoul),
+        log('none', at: DateTime.utc(2025, 3, 3), loadout: '아침 산책'),
+      ];
+    });
+
+    List<String> ids(PhotoFilter filter) => [
+      for (final e in queryPlaceLogs(logs, places, filter)) e.log.id,
+    ];
+
+    test('조건이 없으면 전부 최신순', () {
+      expect(ids(const PhotoFilter()), ['seoul', 'none', 'osaka', 'tokyo']);
+    });
+
+    test('연도는 그때 기기의 현지 시각으로 본다', () {
+      logs.add(
+        log(
+          'new-year',
+          at: DateTime.utc(2025, 12, 31, 16),
+          offset: const Duration(hours: 9),
+        ),
+      );
+
+      expect(ids(const PhotoFilter(year: 2026)), ['seoul', 'new-year']);
+    });
+
+    test('지역 조건이 있으면 위치 없는 기록은 빠진다', () {
+      expect(ids(const PhotoFilter(country: '일본')), ['osaka', 'tokyo']);
+      expect(ids(const PhotoFilter(country: '일본', admin: '도쿄도')), ['tokyo']);
+    });
+
+    test('필름 시뮬레이션·위치 없음 조건은 기록에 쓰지 않는다', () {
+      expect(
+        ids(const PhotoFilter(films: {eterna}, noLocationOnly: true)),
+        hasLength(4),
+      );
+    });
+
+    test('검색어는 장소·세트 이름·레시피 이름에서 찾는다', () {
+      logs.add(log('night', at: DateTime.utc(2025), slot: 'Eterna 밤'));
+
+      expect(ids(const PhotoFilter(text: '진난')), ['tokyo']);
+      expect(ids(const PhotoFilter(text: '산책')), ['none']);
+      expect(ids(const PhotoFilter(text: 'eterna')), ['night']);
+    });
+
+    test('선택지는 기록의 연도(현지 시각)와 지역으로 만든다', () {
+      final facets = placeLogFacets(
+        logs,
+        places,
+        const PhotoFilter(country: '일본'),
+      );
+
+      expect(facets.years, [2026, 2025]);
+      expect(facets.countries, containsAll(['일본', '대한민국']));
+      expect(facets.admins, containsAll(['도쿄도', '오사카부']));
+      expect(facets.films, isEmpty);
+    });
+
+    test('항목은 장소를 함께 준다', () {
+      final entry = queryPlaceLogs(
+        logs,
+        places,
+        const PhotoFilter(text: '진난'),
+      ).single;
+
+      expect(entry.place?.locality, '시부야구');
     });
   });
 }

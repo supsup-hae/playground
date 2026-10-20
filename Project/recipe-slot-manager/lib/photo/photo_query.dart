@@ -1,5 +1,6 @@
 import 'package:recipe_slot_manager/photo/photo_source.dart';
 import 'package:recipe_slot_manager/photo/place.dart';
+import 'package:recipe_slot_manager/photo/place_log.dart';
 import 'package:recipe_slot_manager/photo/place_store.dart';
 import 'package:recipe_slot_manager/recipe/recipe_fields.dart';
 
@@ -59,11 +60,7 @@ List<PhotoEntry> queryPhotos(
   PlaceStore places,
   PhotoFilter filter,
 ) {
-  final words = filter.text
-      .toLowerCase()
-      .split(RegExp(r'\s+'))
-      .where((w) => w.isNotEmpty)
-      .toList();
+  final words = _words(filter.text);
   final entries = <PhotoEntry>[];
   for (final photo in photos) {
     final info = photo.info;
@@ -71,21 +68,15 @@ List<PhotoEntry> queryPhotos(
     final place = places.placeOf(info.location);
     if (filter.year != null && info.shotAt?.year != filter.year) continue;
     if (filter.noLocationOnly && info.location != null) continue;
-    if (filter.country != null && place?.country != filter.country) continue;
-    if (filter.admin != null && place?.admin != filter.admin) continue;
-    if (filter.locality != null && place?.locality != filter.locality) {
-      continue;
-    }
+    if (!_inRegion(place, filter)) continue;
     final film = info.recipe['filmSimulation']?.toInt();
     if (filter.films.isNotEmpty && !filter.films.contains(film)) continue;
-    if (words.isNotEmpty) {
-      final haystack = [
-        ...?place?.parts,
-        photo.file.name,
-        if (film != null) filmName(film),
-      ].map((s) => s.toLowerCase()).toList();
-      if (!words.every((w) => haystack.any((h) => h.contains(w)))) continue;
-    }
+    final haystack = [
+      ...?place?.parts,
+      photo.file.name,
+      if (film != null) filmName(film),
+    ];
+    if (!_matches(words, haystack)) continue;
     entries.add((photo: photo, place: place));
   }
   entries.sort((a, b) {
@@ -95,6 +86,50 @@ List<PhotoEntry> queryPhotos(
   });
   return entries;
 }
+
+/// 찾은 세트 저장 기록과 그 장소 이름.
+typedef PlaceLogEntry = ({PlaceLog log, Place? place});
+
+/// 조건에 맞는 세트 저장 기록, 최신순. [PhotoFilter] 의 연도(그때 기기의 현지 시각)·지역·검색어만
+/// 쓰고, 필름 시뮬레이션·위치 없음 조건은 사진에만 쓴다. 검색어는 장소·세트 이름·레시피 이름에서 찾는다.
+List<PlaceLogEntry> queryPlaceLogs(
+  Iterable<PlaceLog> logs,
+  PlaceStore places,
+  PhotoFilter filter,
+) {
+  final words = _words(filter.text);
+  final entries = <PlaceLogEntry>[
+    for (final log in logs)
+      if (places.placeOf(log.location) case final place
+          when (filter.year == null || log.localTime.year == filter.year) &&
+              _inRegion(place, filter) &&
+              _matches(words, [
+                ...?place?.parts,
+                log.loadoutName,
+                ...log.slots.nonNulls,
+              ]))
+        (log: log, place: place),
+  ];
+  return entries..sort((a, b) => b.log.loggedAt.compareTo(a.log.loggedAt));
+}
+
+/// 검색어를 띄어쓰기로 나눈 소문자 낱말.
+List<String> _words(String text) => text
+    .toLowerCase()
+    .split(RegExp(r'\s+'))
+    .where((w) => w.isNotEmpty)
+    .toList();
+
+/// 낱말이 모두 [haystack] 중 하나에 들어 있다. 낱말이 없으면 true.
+bool _matches(List<String> words, List<String> haystack) {
+  final lower = [for (final h in haystack) h.toLowerCase()];
+  return words.every((w) => lower.any((h) => h.contains(w)));
+}
+
+bool _inRegion(Place? place, PhotoFilter filter) =>
+    (filter.country == null || place?.country == filter.country) &&
+    (filter.admin == null || place?.admin == filter.admin) &&
+    (filter.locality == null || place?.locality == filter.locality);
 
 /// 필름 시뮬레이션 코드의 화면 이름 (Eterna).
 String filmName(int code) =>
@@ -115,6 +150,29 @@ PhotoFacets photoFacets(
   Iterable<IndexedPhoto> photos,
   PlaceStore places,
   PhotoFilter filter,
+) => _facets([
+  for (final photo in photos)
+    if (photo.info case final info?)
+      (
+        year: info.shotAt?.year,
+        place: places.placeOf(info.location),
+        film: info.recipe['filmSimulation']?.toInt(),
+      ),
+], filter);
+
+/// 세트 저장 기록에서 연도(그때 기기의 현지 시각)·지역 선택지를 만든다. 필름 시뮬레이션은 비어 있다.
+PhotoFacets placeLogFacets(
+  Iterable<PlaceLog> logs,
+  PlaceStore places,
+  PhotoFilter filter,
+) => _facets([
+  for (final log in logs)
+    (year: log.localTime.year, place: places.placeOf(log.location), film: null),
+], filter);
+
+PhotoFacets _facets(
+  List<({int? year, Place? place, int? film})> items,
+  PhotoFilter filter,
 ) {
   final years = <int>{};
   final countries = <String, int>{};
@@ -125,14 +183,9 @@ PhotoFacets photoFacets(
     if (key != null && key.isNotEmpty) map[key] = (map[key] ?? 0) + 1;
   }
 
-  for (final photo in photos) {
-    final info = photo.info;
-    if (info == null) continue;
-    if (info.shotAt case final shotAt?) years.add(shotAt.year);
-    if (info.recipe['filmSimulation']?.toInt() case final film?) {
-      films[film] = (films[film] ?? 0) + 1;
-    }
-    final place = places.placeOf(info.location);
+  for (final (:year, :place, :film) in items) {
+    if (year != null) years.add(year);
+    if (film != null) films[film] = (films[film] ?? 0) + 1;
     if (place == null) continue;
     count(countries, place.country);
     if (filter.country != null && place.country == filter.country) {
