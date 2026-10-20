@@ -137,7 +137,7 @@ try {
 ## NOT Building
 
 - 주소 변환(3단계), 필터·지도·썸네일·사진 상세(4단계), Supabase 동기화(6단계)
-- 자동 색인(앱 시작·백그라운드) — 버튼으로만 한다
+- 백그라운드 색인(앱이 꺼져 있거나 뒤에 있을 때) — 앱이 앞에 있을 때만 읽는다
 - Android 폴더 직접 고르기(SAF) — MediaStore 앨범만
 - HEIC·RAF 색인
 
@@ -265,3 +265,14 @@ flutter build apk --debug
 - 출처 고르기는 `lib/ui/photo_source_picker.dart`(macOS 폴더, Android 앨범 대화상자)로 나눴다
 - 휴대폰에서 디자인 화면을 보던 중이면 첫 탭(레시피)을 보이고, 창이 넓어지면 디자인으로 돌아간다
 - 디자인 화면의 휴대폰 크기 넘침 시험은 셸 대신 화면을 직접 띄워 확인한다
+- 자동 색인(사용자 요청으로 추가): 앱을 열 때와 앱이 다시 앞으로 올 때 모든 출처를 읽는다(`lib/photo/auto_index.dart`). 진행 상태는 색인기(`PhotoIndexer.progress`, `indexAll`)가 들고 있어 화면을 오가도 사진 화면에 보인다
+
+## 열린 결정: Android 폴더 지정
+
+구글 드라이브처럼 Android 에서도 폴더(하위 폴더 포함)를 지정하는 방법. 지금은 MediaStore 앨범(폴더 하나, 하위 폴더 없음)만 고른다.
+
+| 방법 | 위치(GPS) | 비고 |
+|---|---|---|
+| A. SAF 폴더 선택(`ACTION_OPEN_DOCUMENT_TREE`)으로 직접 읽기 | 지워질 수 있음 | 파일 선택기로 받은 사진의 위치도 지우도록 Android 가 바뀌었다는 보고(Google issue 428397711, 2026-04). `ACCESS_MEDIA_LOCATION` 이 SAF 읽기에도 통하는지는 문서에 없다 |
+| B. SAF 로 폴더만 고르고, 읽기는 MediaStore(`RELATIVE_PATH` 앞부분 일치 + `setRequireOriginal`) | 지금과 같음 | 드라이브와 같은 폴더 고르기 화면. 사진 앱이 인식하는 폴더(DCIM·Pictures 등)만 된다 |
+| C. 사진 폴더 경로 목록에서 고르기(MediaStore `RELATIVE_PATH`) | 지금과 같음 | 폴더 선택 화면 없이 목록 대화상자 |

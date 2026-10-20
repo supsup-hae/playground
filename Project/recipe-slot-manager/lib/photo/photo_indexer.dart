@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:recipe_slot_manager/camera/camera_log.dart';
 import 'package:recipe_slot_manager/import/recipe_import.dart';
 import 'package:recipe_slot_manager/photo/photo_index_store.dart';
@@ -15,7 +16,8 @@ typedef PhotoIndexResult = ({
 });
 
 /// 출처의 사진 목록을 색인과 비교해 새 사진과 바뀐 사진만 읽고 저장한다.
-class PhotoIndexer {
+/// [indexAll] 의 진행을 [progress] 로 알린다.
+class PhotoIndexer extends ChangeNotifier {
   PhotoIndexer(this.store, {required this.readers, required this.log});
 
   final PhotoIndexStore store;
@@ -24,6 +26,40 @@ class PhotoIndexer {
 
   /// 색인을 하나씩 한다. 겹친 색인은 앞 색인이 저장한 결과와 비교한다.
   final _queue = SerialQueue();
+
+  /// [indexAll] 이 읽고 있는 출처 이름과 (읽은 수, 전체). 읽는 중이 아니면 null.
+  ({String name, int done, int total})? get progress => _progress;
+  ({String name, int done, int total})? _progress;
+
+  void _setProgress(({String name, int done, int total})? progress) {
+    _progress = progress;
+    notifyListeners();
+  }
+
+  /// 모든 출처를 차례로 읽는다. 읽지 못한 출처는 로그에 남기고 다음 출처로 넘어가며, 그 이유
+  /// 목록을 돌려준다. 이미 읽는 중이면 아무것도 하지 않는다.
+  Future<List<String>> indexAll() async {
+    if (_progress != null) return const [];
+    final failures = <String>[];
+    try {
+      for (final source in store.sources) {
+        _setProgress((name: source.name, done: 0, total: 0));
+        try {
+          await index(
+            source,
+            onProgress: (done, total) =>
+                _setProgress((name: source.name, done: done, total: total)),
+          );
+        } on PhotoSourceException catch (e) {
+          log.add('사진 색인 실패: ${e.message}');
+          failures.add(e.message);
+        }
+      }
+    } finally {
+      _setProgress(null);
+    }
+    return failures;
+  }
 
   /// [onProgress] 는 읽을 사진 수 기준 (읽은 수, 전체)이다. 출처 목록을 읽지 못하면
   /// [PhotoSourceException] 을 그대로 던지고 색인은 바꾸지 않는다.

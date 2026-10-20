@@ -25,9 +25,6 @@ class PhotosPage extends StatefulWidget {
 }
 
 class _PhotosPageState extends State<PhotosPage> {
-  /// 색인 중인 출처 이름과 진행 (읽은 수, 전체). 색인 중이 아니면 null.
-  ({String name, int done, int total})? _progress;
-
   PhotoIndexStore get _store => widget.setup.store;
 
   void _tell(String message) =>
@@ -71,38 +68,19 @@ class _PhotosPageState extends State<PhotosPage> {
   }
 
   Future<void> _indexAll() async {
-    for (final source in _store.sources) {
-      // 다른 탭으로 가면 화면은 사라져도 색인은 끝까지 한다.
-      if (!mounted) return;
-      setState(() => _progress = (name: source.name, done: 0, total: 0));
-      try {
-        await widget.setup.indexer.index(
-          source,
-          onProgress: (done, total) {
-            if (mounted) {
-              setState(
-                () => _progress = (name: source.name, done: done, total: total),
-              );
-            }
-          },
-        );
-      } on PhotoSourceException catch (e) {
-        widget.setup.indexer.log.add('사진 색인 실패: ${e.message}');
-        if (mounted) _tell(e.message);
-      }
-    }
-    if (mounted) setState(() => _progress = null);
+    final failures = await widget.setup.indexer.indexAll();
+    if (mounted && failures.isNotEmpty) _tell(failures.join('\n'));
   }
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: _store,
+      listenable: Listenable.merge([_store, widget.setup.indexer]),
       builder: (context, _) {
         final sources = _store.sources;
         final summary = _store.summary;
         final redacted = _store.photos.any((p) => p.locationRedacted);
-        final progress = _progress;
+        final progress = widget.setup.indexer.progress;
         return ListView(
           padding: const EdgeInsets.all(AppSpacing.lg),
           children: [

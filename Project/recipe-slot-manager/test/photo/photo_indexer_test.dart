@@ -164,6 +164,73 @@ void main() {
     expect(store.photosOf('s1'), hasLength(2));
   });
 
+  group('indexAll', () {
+    const album = PhotoSource(
+      id: 's2',
+      kind: PhotoSourceKind.album,
+      name: 'XApp',
+      location: '-17',
+    );
+
+    test('모든 출처를 차례로 읽고 진행을 알린 뒤 끝나면 진행을 비운다', () async {
+      final albumReader = FakePhotoReader()..put('x.jpg');
+      indexer = PhotoIndexer(
+        store,
+        readers: {
+          PhotoSourceKind.folder: reader,
+          PhotoSourceKind.album: albumReader,
+        },
+        log: log,
+      );
+      await store.saveSource(album);
+      reader.put('a.jpg');
+      final seen = <String>[];
+      indexer.addListener(() {
+        if (indexer.progress case final p?) seen.add(p.name);
+      });
+
+      final failures = await indexer.indexAll();
+
+      expect(failures, isEmpty);
+      expect(seen.toSet(), {'X-T5', 'XApp'});
+      expect(indexer.progress, isNull);
+      expect(store.photos, hasLength(2));
+    });
+
+    test('읽지 못한 출처는 로그와 결과에 남기고 다음 출처를 읽는다', () async {
+      indexer = PhotoIndexer(
+        store,
+        readers: {
+          PhotoSourceKind.folder: reader,
+          PhotoSourceKind.album: FakePhotoReader()..put('x.jpg'),
+        },
+        log: log,
+      );
+      await store.saveSource(album);
+      reader.listError = const PhotoSourceException('폴더를 찾을 수 없습니다: X-T5');
+
+      final failures = await indexer.indexAll();
+
+      expect(failures, ['폴더를 찾을 수 없습니다: X-T5']);
+      expect(store.photosOf('s2'), hasLength(1));
+      expect(
+        log.entries.map((e) => e.$2),
+        contains('사진 색인 실패: 폴더를 찾을 수 없습니다: X-T5'),
+      );
+    });
+
+    test('이미 읽는 중이면 새로 시작하지 않는다', () async {
+      reader.put('a.jpg');
+
+      final first = indexer.indexAll();
+      final second = await indexer.indexAll();
+      await first;
+
+      expect(second, isEmpty);
+      expect(reader.reads, ['a.jpg']);
+    });
+  });
+
   test('100장을 10초 안에 색인한다 (가짜 출처 기준)', () async {
     for (var i = 0; i < 100; i++) {
       reader.put('$i.jpg', bytes: fujiJpeg(imageCount: i));
