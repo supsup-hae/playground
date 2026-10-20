@@ -6,7 +6,10 @@ import 'package:recipe_slot_manager/camera/camera_log.dart';
 import 'package:recipe_slot_manager/photo/photo_index_store.dart';
 import 'package:recipe_slot_manager/photo/photo_indexer.dart';
 import 'package:recipe_slot_manager/photo/photo_source.dart';
+import 'package:recipe_slot_manager/photo/place_resolver.dart';
+import 'package:recipe_slot_manager/photo/place_store.dart';
 
+import '../support/fake_geocoder.dart';
 import '../support/fake_photo_reader.dart';
 
 void main() {
@@ -247,6 +250,35 @@ void main() {
 
       expect(failures.single, contains('No space left on device'));
       expect(store.photosOf('s2'), hasLength(1));
+      expect(indexer.progress, isNull);
+    });
+
+    test('모든 출처를 읽은 뒤 장소 이름이 없는 좌표를 묻고 진행을 알린다', () async {
+      final places = PlaceStore(Directory('${root.path}/places'));
+      final geocoder = FakeGeocoder();
+      indexer = PhotoIndexer(
+        store,
+        readers: {PhotoSourceKind.folder: reader},
+        log: log,
+        places: PlaceResolver(
+          photos: store,
+          places: places,
+          geocoder: geocoder,
+          log: log,
+          wait: (_) async {},
+        ),
+      );
+      reader.put('a.jpg', bytes: fujiJpeg(gps: (35.0, 139.0)));
+      final names = <String>[];
+      indexer.addListener(() {
+        if (indexer.progress case final p?) names.add(p.name);
+      });
+
+      await indexer.indexAll();
+
+      expect(geocoder.requests, hasLength(1));
+      expect(places.place('35.0000,139.0000')?.country, '나라 35.0');
+      expect(names.toSet(), {'X-T5', '장소 이름'});
       expect(indexer.progress, isNull);
     });
 

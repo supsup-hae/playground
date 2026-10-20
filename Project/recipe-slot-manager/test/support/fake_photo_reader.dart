@@ -4,9 +4,22 @@ import 'package:recipe_slot_manager/photo/photo_source.dart';
 
 import 'exif_builder.dart';
 
-/// 촬영 시각과 필름 시뮬레이션(FilmMode)만 든 후지 JPEG 앞부분.
-Uint8List fujiJpeg({int filmMode = 0x700, int imageCount = 1}) => jpegWithExif(
+/// 촬영 시각과 필름 시뮬레이션(FilmMode), [gps] 가 있으면 북위·동경(도)을 든 후지 JPEG 앞부분.
+Uint8List fujiJpeg({
+  int filmMode = 0x700,
+  int imageCount = 1,
+  (double, double)? gps,
+}) => jpegWithExif(
   ifd0Tags: {0x0110: (tiffAscii, asciiValue('X-T5'))},
+  gpsTags: switch (gps) {
+    (final lat, final lng) => {
+      0x0001: (tiffAscii, asciiValue('N')),
+      0x0002: (tiffRational, [(lat * 10000).round(), 10000, 0, 1, 0, 1]),
+      0x0003: (tiffAscii, asciiValue('E')),
+      0x0004: (tiffRational, [(lng * 10000).round(), 10000, 0, 1, 0, 1]),
+    },
+    null => null,
+  },
   exifTags: {
     0x9003: (tiffAscii, asciiValue('2026:10:11 15:26:10')),
     0x9011: (tiffAscii, asciiValue('+09:00')),
