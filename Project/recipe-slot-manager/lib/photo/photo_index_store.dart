@@ -36,11 +36,33 @@ class PhotoIndexStore extends ChangeNotifier {
 
   PhotoSource? sourceById(String id) => _sources[id];
 
-  List<IndexedPhoto> get photos => [for (final list in _photos.values) ...list];
+  /// 모든 출처의 사진. Mac 과 휴대폰에 같은 사진이 있으면 하나만 둔다([_sameKey]). 위치가 든
+  /// 쪽을 고르고, 둘 다 같으면 먼저 추가한 출처의 것을 쓴다.
+  List<IndexedPhoto> get photos {
+    final unique = <String, IndexedPhoto>{};
+    for (final photo in _photos.values.expand((list) => list)) {
+      final key = _sameKey(photo);
+      final kept = unique[key];
+      if (kept == null ||
+          (kept.info?.location == null && photo.info?.location != null)) {
+        unique[key] = photo;
+      }
+    }
+    return unique.values.toList();
+  }
+
+  /// 같은 사진이면 같은 값: 파일 이름(대소문자 무시)과 촬영 시각. 카메라 파일 번호는 9999 다음에
+  /// 다시 쓰이므로 시각을 함께 본다. 읽지 못한 사진은 출처와 파일마다 따로 둔다.
+  static String _sameKey(IndexedPhoto photo) => switch (photo.info) {
+    final info? =>
+      '${photo.file.name.toLowerCase()}|${info.shotAt?.toIso8601String()}',
+    null => '${photo.sourceId}|${photo.file.id}',
+  };
 
   List<IndexedPhoto> photosOf(String sourceId) =>
       List.unmodifiable(_photos[sourceId] ?? const <IndexedPhoto>[]);
 
+  /// [photos] 기준이라 같은 사진은 한 번 센다.
   PhotoSummary get summary {
     final all = photos;
     final counts = <int, int>{};

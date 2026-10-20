@@ -153,4 +153,76 @@ void main() {
       throwsFormatException,
     );
   });
+
+  group('같은 사진(파일 이름 + 촬영 시각)은 한 번만', () {
+    final shot = DateTime.utc(2026, 10, 11, 15, 26, 10);
+
+    IndexedPhoto copy(
+      String sourceId,
+      String id,
+      String name, {
+      DateTime? shotAt,
+      GeoPoint? location,
+    }) => IndexedPhoto(
+      sourceId: sourceId,
+      file: (id: id, name: name, size: 100, modifiedMs: 1),
+      info: PhotoInfo(shotAt: shotAt, location: location),
+    );
+
+    Future<PhotoIndexStore> storeWith(
+      List<IndexedPhoto> mac,
+      List<IndexedPhoto> phone,
+    ) async {
+      final store = newStore();
+      await store.saveSource(folder);
+      await store.saveSource(album);
+      await store.replacePhotos('s1', mac);
+      await store.replacePhotos('s2', phone);
+      return store;
+    }
+
+    test('Mac 과 휴대폰에 같은 사진이 있으면 하나로 보이고, 위치가 있는 쪽을 쓴다', () async {
+      final store = await storeWith(
+        [copy('s1', '/m/DSCF1422.JPG', 'DSCF1422.JPG', shotAt: shot)],
+        [
+          copy(
+            's2',
+            'content://1',
+            'dscf1422.jpg',
+            shotAt: shot,
+            location: (latitude: 35.6, longitude: 139.7),
+          ),
+        ],
+      );
+
+      expect(store.photos.single.sourceId, 's2');
+      expect(store.summary.total, 1);
+      expect(store.photosOf('s1'), hasLength(1), reason: '출처별 색인은 그대로');
+    });
+
+    test('이름이 같아도 촬영 시각이 다르면(번호가 돌아 다시 쓰인 경우) 다른 사진', () async {
+      final store = await storeWith(
+        [copy('s1', 'a', 'DSCF0001.JPG', shotAt: shot)],
+        [
+          copy(
+            's2',
+            'b',
+            'DSCF0001.JPG',
+            shotAt: shot.add(const Duration(days: 400)),
+          ),
+        ],
+      );
+
+      expect(store.photos, hasLength(2));
+    });
+
+    test('읽지 못한 사진은 합치지 않는다', () async {
+      final store = await storeWith(
+        [photo('s1', 'DSCF0002.JPG', error: '깨짐')],
+        [photo('s2', 'DSCF0002.JPG', error: '깨짐')],
+      );
+
+      expect(store.photos, hasLength(2));
+    });
+  });
 }

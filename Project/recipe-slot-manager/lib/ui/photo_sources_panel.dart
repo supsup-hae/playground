@@ -74,7 +74,9 @@ class _PhotoSourcesPanelState extends State<PhotoSourcesPanel> {
       builder: (context, _) {
         final sources = _store.sources;
         final summary = _store.summary;
-        final redacted = _store.photos.any((p) => p.locationRedacted);
+        final redacted = _store.sources.any(
+          (s) => _store.photosOf(s.id).any((p) => p.locationRedacted),
+        );
         final progress = widget.setup.indexer.progress;
         return ListView(
           padding: const EdgeInsets.all(AppSpacing.lg),
