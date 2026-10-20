@@ -38,6 +38,9 @@ class FakePhotoReader implements PhotoSourceReader {
   final closed = <String>[];
   Object? listError;
 
+  /// 있으면 [readHead] 가 던진다.
+  Object? readError;
+
   void put(
     String id, {
     int size = 100,
@@ -66,6 +69,7 @@ class FakePhotoReader implements PhotoSourceReader {
     int length = jpegHeadBytes,
   }) async {
     reads.add(file.id);
+    if (readError case final error?) throw error;
     final entry = files[file.id]!;
     return (bytes: entry.bytes, locationRedacted: entry.redacted);
   }

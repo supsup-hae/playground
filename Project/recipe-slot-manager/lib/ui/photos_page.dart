@@ -42,9 +42,15 @@ class _PhotosPageState extends State<PhotosPage> {
   void _openSources() => showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
+    // 시트 안의 알림이 시트 뒤에 가리지 않도록 시트에 따로 메신저를 둔다.
     builder: (context) => SizedBox(
       height: MediaQuery.sizeOf(context).height * 0.8,
-      child: PhotoSourcesPanel(setup: _setup),
+      child: ScaffoldMessenger(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: PhotoSourcesPanel(setup: _setup),
+        ),
+      ),
     ),
   );
 
@@ -227,12 +233,17 @@ class _PhotosPageState extends State<PhotosPage> {
     };
   }
 
+  /// "모든 연도" 메뉴 값. 메뉴는 null 값을 닫기로 처리하므로 쓰지 않는 연도로 나타낸다.
+  static const _allYears = 0;
+
   Widget _yearMenu(PhotoFilter filter, PhotoFacets facets) =>
-      PopupMenuButton<int?>(
+      PopupMenuButton<int>(
         tooltip: '연도',
-        onSelected: (year) => _update((f) => f.copyWith(year: () => year)),
+        onSelected: (year) => _update(
+          (f) => f.copyWith(year: () => year == _allYears ? null : year),
+        ),
         itemBuilder: (_) => [
-          const PopupMenuItem(value: null, child: Text('모든 연도')),
+          const PopupMenuItem(value: _allYears, child: Text('모든 연도')),
           for (final year in facets.years)
             PopupMenuItem(value: year, child: Text('$year년')),
         ],

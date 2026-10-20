@@ -99,12 +99,16 @@ void main() {
   Future<void> pumpPhotos(
     WidgetTester tester, {
     Size size = TestApp.largeWindow,
+    PhotoSource? picked,
   }) async {
     await seed(tester);
     await app.pumpPage(
       tester,
       Scaffold(
-        body: PhotosPage(setup: app.photos(), library: app.library),
+        body: PhotosPage(
+          setup: app.photos(addSource: (_) async => picked),
+          library: app.library,
+        ),
       ),
       size: size,
     );
@@ -154,6 +158,22 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(countText('3장 · 위치 없음 0장'), findsOneWidget);
+  });
+
+  testWidgets('연도를 고른 뒤 모든 연도를 고르면 해제된다', (tester) async {
+    await pumpPhotos(tester);
+    await tester.tap(find.text('연도'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('2025년').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('2025년'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('모든 연도'));
+    await tester.pumpAndSettle();
+
+    expect(countText('5장 · 위치 없음 2장'), findsOneWidget);
+    expect(app.photoFilter.value.year, isNull);
   });
 
   testWidgets('지역은 나라 → 광역 → 도시 차례로 고르고, 해제할 수 있다', (tester) async {
@@ -247,6 +267,31 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(PhotoSourcesPanel), findsOneWidget);
+  });
+
+  testWidgets('출처 시트 안의 알림은 시트 위에 보인다', (tester) async {
+    await pumpPhotos(
+      tester,
+      picked: const PhotoSource(
+        id: 'dup',
+        kind: PhotoSourceKind.folder,
+        name: 'X-T5',
+        location: '/photos',
+      ),
+    );
+    await tester.tap(find.byTooltip('사진 출처'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('추가'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.text('이미 추가한 출처입니다'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('찾기 조건은 화면을 다시 만들어도 남는다', (tester) async {

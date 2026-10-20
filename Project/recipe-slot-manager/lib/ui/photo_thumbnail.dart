@@ -17,17 +17,19 @@ class PhotoThumbnails {
   /// 넣은 순서를 지키는 맵이라 맨 앞이 가장 오래 쓰지 않은 썸네일이다.
   final _cache = <String, Future<Uint8List?>>{};
 
-  /// 썸네일이 없거나 사진을 읽지 못하면 null.
+  /// 썸네일이 없거나 사진을 읽지 못하면 null. 파일 크기·수정 시각이 바뀌면 다시 읽고, 읽지
+  /// 못한 사진은 기억하지 않아 다음에 다시 읽는다.
   Future<Uint8List?> of(IndexedPhoto photo) {
-    final key = '${photo.sourceId}|${photo.file.id}';
+    final file = photo.file;
+    final key = '${photo.sourceId}|${file.id}|${file.size}|${file.modifiedMs}';
     final cached = _cache.remove(key);
-    final future = cached ?? _load(photo);
+    final future = cached ?? _load(photo, key);
     _cache[key] = future;
     if (_cache.length > capacity) _cache.remove(_cache.keys.first);
     return future;
   }
 
-  Future<Uint8List?> _load(IndexedPhoto photo) async {
+  Future<Uint8List?> _load(IndexedPhoto photo, String key) async {
     final source = indexer.store.sourceById(photo.sourceId);
     final reader = source == null ? null : indexer.readers[source.kind];
     if (source == null || reader == null) return null;
@@ -36,6 +38,7 @@ class PhotoThumbnails {
         (await reader.readHead(source, photo.file)).bytes,
       );
     } on PhotoSourceException {
+      _cache.remove(key);
       return null;
     }
   }
