@@ -52,10 +52,10 @@ class PhotoIndexStore extends ChangeNotifier {
   }
 
   /// 같은 사진이면 같은 값: 파일 이름(대소문자 무시)과 촬영 시각. 카메라 파일 번호는 9999 다음에
-  /// 다시 쓰이므로 시각을 함께 본다. 읽지 못한 사진은 출처와 파일마다 따로 둔다.
-  static String _sameKey(IndexedPhoto photo) => switch (photo.info) {
-    final info? =>
-      '${photo.file.name.toLowerCase()}|${info.shotAt?.toIso8601String()}',
+  /// 다시 쓰이므로 시각을 함께 본다. 촬영 시각이 없거나 읽지 못한 사진은 출처와 파일마다 따로 둔다.
+  static String _sameKey(IndexedPhoto photo) => switch (photo.info?.shotAt) {
+    final shotAt? =>
+      '${photo.file.name.toLowerCase()}|${shotAt.toIso8601String()}',
     null => '${photo.sourceId}|${photo.file.id}',
   };
 
@@ -147,7 +147,11 @@ class PhotoIndexStore extends ChangeNotifier {
     await _writes.run(
       () => writeJsonAtomically(_file, {
         'sources': [for (final s in _sources.values) s.toJson()],
-        'photos': [for (final p in photos) p.toJson()],
+        // 화면용 [photos] 가 아니라 출처별 항목 전체를 저장한다.
+        'photos': [
+          for (final list in _photos.values)
+            for (final p in list) p.toJson(),
+        ],
       }),
     );
     notifyListeners();

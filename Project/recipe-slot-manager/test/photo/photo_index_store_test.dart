@@ -216,6 +216,29 @@ void main() {
       expect(store.photos, hasLength(2));
     });
 
+    test('저장했다가 다시 읽어도 출처별 항목은 둘 다 남는다', () async {
+      await storeWith(
+        [copy('s1', 'a', 'DSCF1422.JPG', shotAt: shot)],
+        [copy('s2', 'b', 'DSCF1422.JPG', shotAt: shot)],
+      );
+
+      final read = newStore();
+      await read.load();
+
+      expect(read.photosOf('s1'), hasLength(1));
+      expect(read.photosOf('s2'), hasLength(1));
+      expect(read.photos, hasLength(1));
+    });
+
+    test('촬영 시각이 없으면 이름이 같아도 합치지 않는다', () async {
+      final store = await storeWith(
+        [copy('s1', 'a', 'IMG_0001.JPG')],
+        [copy('s2', 'b', 'IMG_0001.JPG')],
+      );
+
+      expect(store.photos, hasLength(2));
+    });
+
     test('읽지 못한 사진은 합치지 않는다', () async {
       final store = await storeWith(
         [photo('s1', 'DSCF0002.JPG', error: '깨짐')],
