@@ -163,4 +163,7 @@ abstract interface class PhotoSourceReader {
   Future<List<PhotoFile>> list(PhotoSource source);
 
   Future<PhotoHead> readHead(PhotoSource source, PhotoFile file);
+
+  /// [list] 로 연 출처 접근을 닫는다. 색인이 끝나면(실패해도) 부른다.
+  Future<void> close(PhotoSource source);
 }

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:recipe_slot_manager/camera/camera_log.dart';
 import 'package:recipe_slot_manager/import/recipe_import.dart';
@@ -53,6 +55,11 @@ class PhotoIndexer extends ChangeNotifier {
         } on PhotoSourceException catch (e) {
           log.add('사진 색인 실패: ${e.message}');
           failures.add(e.message);
+        } on FileSystemException catch (e) {
+          // 색인 파일 쓰기 실패(디스크 가득 참 등). 다음 출처는 계속 읽는다.
+          final message = '${source.name}: ${e.message}';
+          log.add('사진 색인 실패: $message');
+          failures.add(message);
         }
       }
     } finally {
@@ -76,6 +83,19 @@ class PhotoIndexer extends ChangeNotifier {
     final reader =
         readers[source.kind] ??
         (throw const PhotoSourceException('이 기기에서는 이 출처를 읽을 수 없습니다'));
+    try {
+      return await _indexWith(reader, source, onProgress, watch);
+    } finally {
+      await reader.close(source);
+    }
+  }
+
+  Future<PhotoIndexResult> _indexWith(
+    PhotoSourceReader reader,
+    PhotoSource source,
+    void Function(int done, int total)? onProgress,
+    Stopwatch watch,
+  ) async {
     final files = await reader.list(source);
     final known = {for (final p in store.photosOf(source.id)) p.file.id: p};
 

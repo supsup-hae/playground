@@ -21,6 +21,7 @@ Uint8List fujiJpeg({int filmMode = 0x700, int imageCount = 1}) => jpegWithExif(
 class FakePhotoReader implements PhotoSourceReader {
   final files = <String, ({PhotoFile file, Uint8List bytes, bool redacted})>{};
   final reads = <String>[];
+  final closed = <String>[];
   Object? listError;
 
   void put(
@@ -40,6 +41,9 @@ class FakePhotoReader implements PhotoSourceReader {
     if (listError case final error?) throw error;
     return [for (final entry in files.values) entry.file];
   }
+
+  @override
+  Future<void> close(PhotoSource source) async => closed.add(source.id);
 
   @override
   Future<PhotoHead> readHead(PhotoSource source, PhotoFile file) async {

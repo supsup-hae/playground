@@ -52,6 +52,10 @@ class MediaFolderReader implements PhotoSourceReader {
         (id: id, name: name, size: size, modifiedMs: modified),
   ];
 
+  /// MediaStore 는 열어 둔 접근이 없다.
+  @override
+  Future<void> close(PhotoSource source) async {}
+
   @override
   Future<PhotoHead> readHead(PhotoSource source, PhotoFile file) async {
     final result = await _call<Map<Object?, Object?>>('readHead', {

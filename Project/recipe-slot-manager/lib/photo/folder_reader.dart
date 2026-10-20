@@ -43,8 +43,7 @@ class FolderReader implements PhotoSourceReader {
   /// 북마크가 오래되어 새로 만들었을 때 출처를 저장하게 한다.
   final Future<void> Function(PhotoSource renewed)? onSourceRenewed;
 
-  /// 출처 id → 북마크를 풀어 얻은 경로. 접근은 다음 [list] 까지 열어 둔다.
-  // ponytail: 출처마다 접근 하나를 앱이 끝날 때까지 열어 둘 수 있다. 출처가 많아지면 색인 뒤 닫기.
+  /// 출처 id → 북마크를 풀어 얻은 경로. 접근은 [close] 까지 열어 둔다.
   final _opened = <String, String>{};
 
   @override
@@ -101,12 +100,17 @@ class FolderReader implements PhotoSourceReader {
     }
   }
 
-  Future<String> _open(PhotoSource source) async {
-    final bookmark = source.bookmark;
-    if (!useBookmarks || bookmark == null) return source.location;
+  @override
+  Future<void> close(PhotoSource source) async {
     if (_opened.remove(source.id) case final path?) {
       await _call<void>('stop', path);
     }
+  }
+
+  Future<String> _open(PhotoSource source) async {
+    final bookmark = source.bookmark;
+    if (!useBookmarks || bookmark == null) return source.location;
+    await close(source);
     final resolved = await _call<Map<Object?, Object?>>(
       'resolve',
       base64Decode(bookmark),

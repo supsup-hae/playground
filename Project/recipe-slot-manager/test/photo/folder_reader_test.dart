@@ -136,6 +136,29 @@ void main() {
       expect(calls[1].arguments, root.path);
     });
 
+    test('close 는 열어 둔 접근을 닫고, 다음 목록은 닫지 않고 새로 연다', () async {
+      handler = (call) async => switch (call.method) {
+        'resolve' => {'path': root.path, 'stale': false},
+        _ => null,
+      };
+      final reader = FolderReader(useBookmarks: true);
+      final source = sourceAt('/old', bookmark: 'AQID');
+
+      await reader.list(source);
+      await reader.close(source);
+      await reader.close(source);
+      await reader.list(source);
+
+      expect(calls.map((c) => c.method), ['resolve', 'stop', 'resolve']);
+      expect(calls[1].arguments, root.path);
+    });
+
+    test('북마크가 없는 출처의 close 는 아무것도 하지 않는다', () async {
+      await FolderReader(useBookmarks: true).close(sourceAt(root.path));
+
+      expect(calls, isEmpty);
+    });
+
     test('오래된 북마크면 새 북마크와 경로로 출처를 갱신한다', () async {
       handler = (call) async => switch (call.method) {
         'resolve' => {

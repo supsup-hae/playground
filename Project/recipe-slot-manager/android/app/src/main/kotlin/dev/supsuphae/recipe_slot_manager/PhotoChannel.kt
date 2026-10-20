@@ -69,17 +69,29 @@ class PhotoChannel(private val activity: Activity) : MethodChannel.MethodCallHan
     private fun granted(permission: String) =
         activity.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
 
+    /**
+     * 사진을 읽을 수 있는가. Android 14+ 에서 "일부 사진만 허용"을 고르면 READ_MEDIA_IMAGES 대신
+     * READ_MEDIA_VISUAL_USER_SELECTED 만 받으며, 이때는 고른 사진만 MediaStore 쿼리에 나온다.
+     */
+    private fun imagesGranted() =
+        granted(imagePermission) ||
+            (Build.VERSION.SDK_INT >= 34 && granted(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED))
+
     private fun locationGranted() =
         Build.VERSION.SDK_INT < 29 || granted(Manifest.permission.ACCESS_MEDIA_LOCATION)
 
     private fun accessState() = mapOf(
-        "images" to granted(imagePermission),
+        "images" to imagesGranted(),
         "location" to locationGranted(),
     )
 
     private fun requestAccess(result: MethodChannel.Result) {
         val missing = buildList {
-            if (!granted(imagePermission)) add(imagePermission)
+            if (!imagesGranted()) {
+                add(imagePermission)
+                // 함께 요청하지 않으면 "일부 사진만 허용"이 호환 모드로 처리되어 앱이 뒤로 갈 때 회수된다.
+                if (Build.VERSION.SDK_INT >= 34) add(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED)
+            }
             if (Build.VERSION.SDK_INT >= 29 && !locationGranted()) {
                 add(Manifest.permission.ACCESS_MEDIA_LOCATION)
             }
@@ -99,7 +111,7 @@ class PhotoChannel(private val activity: Activity) : MethodChannel.MethodCallHan
     }
 
     private fun requireImages() {
-        if (!granted(imagePermission)) throw PermissionMissing()
+        if (!imagesGranted()) throw PermissionMissing()
     }
 
     private fun pickFolder(result: MethodChannel.Result) {

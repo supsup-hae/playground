@@ -164,6 +164,18 @@ void main() {
     expect(store.photosOf('s1'), hasLength(2));
   });
 
+  test('색인이 끝나면 성공·실패와 관계없이 출처 읽기를 닫는다', () async {
+    reader.put('a.jpg');
+    await indexer.index(source);
+    reader.listError = const PhotoSourceException('폴더를 찾을 수 없습니다: X-T5');
+    await expectLater(
+      indexer.index(source),
+      throwsA(isA<PhotoSourceException>()),
+    );
+
+    expect(reader.closed, ['s1', 's1']);
+  });
+
   group('indexAll', () {
     const album = PhotoSource(
       id: 's2',
@@ -217,6 +229,25 @@ void main() {
         log.entries.map((e) => e.$2),
         contains('사진 색인 실패: 폴더를 찾을 수 없습니다: X-T5'),
       );
+    });
+
+    test('저장소·파일 오류도 로그와 결과에 남기고 다음 출처를 읽는다', () async {
+      indexer = PhotoIndexer(
+        store,
+        readers: {
+          PhotoSourceKind.folder: reader,
+          PhotoSourceKind.mediaFolder: FakePhotoReader()..put('x.jpg'),
+        },
+        log: log,
+      );
+      await store.saveSource(album);
+      reader.listError = const FileSystemException('No space left on device');
+
+      final failures = await indexer.indexAll();
+
+      expect(failures.single, contains('No space left on device'));
+      expect(store.photosOf('s2'), hasLength(1));
+      expect(indexer.progress, isNull);
     });
 
     test('이미 읽는 중이면 새로 시작하지 않는다', () async {
