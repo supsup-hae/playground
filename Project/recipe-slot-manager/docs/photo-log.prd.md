@@ -43,7 +43,7 @@ We'll know we're right when "1년 전 일본에서 어떤 골목에서 어떤 �
 - [ ] Android 에서 XApp 이 사진을 저장하는 폴더 경로 - 시스템 폴더 선택 창에서 사용자가 고르게 해 경로에 기대지 않는다
 - [ ] 휴대폰과 Mac 에 있는 같은 사진을 무엇으로 판별하나 (촬영 시각 + 초 이하 시각, `ImageUniqueID` 존재 여부) - 1단계에서 표본으로 확인
 - [ ] macOS·Android 주소 변환의 호출 제한과 한국어로 받은 일본 주소의 형태 - 3단계에서 좌표 캐시로 호출 수를 줄인다
-- [ ] Mac 에서 묶음을 쓸 때도 위치를 기록할지 - macOS 위치 권한이 필요하다. 현장 쓰기는 Android 라 우선 Android 만 기록한다
+- [x] Mac 에서 묶음을 쓸 때도 위치를 기록할지 - 기록은 남기고 위치 칸만 비운다 (5단계 계획 D2)
 
 ---
 
@@ -124,8 +124,8 @@ When 예전 여행 사진의 장소와 설정을 떠올리고 싶으면, I want 
 | 1 | 촬영 정보 읽기 | GPS IFD(RATIONAL), 촬영 시각·시간대, 필름 시뮬레이션 → 사진 정보 | complete (위치 든 실제 사진 미확인) | - | - | [plans/photo-log-1-photo-info.plan.md](plans/photo-log-1-photo-info.plan.md) |
 | 2 | 사진 색인 | Mac·Android 폴더 고르기(하위 폴더 포함), 자동 색인, 권한, 바뀐 사진만 읽기, 기기 저장 | complete (실기기 미확인) | with 3 | 1 | [plans/photo-log-2-photo-index.plan.md](plans/photo-log-2-photo-index.plan.md) |
 | 3 | 장소 이름 | 주소 변환 채널(macOS·Android), 좌표 캐시 | complete (실기기 미확인) | - | 1 | [plans/photo-log-3-4-places-browse.plan.md](plans/photo-log-3-4-places-browse.plan.md) |
-| 4 | 찾기 화면 | 사진 탭: 목록·지도 전환, 기간·지역·시뮬레이션 필터와 검색, 위치 없음 묶음, 사진 상세 | in-progress | - | 2, 3 | [plans/photo-log-3-4-places-browse.plan.md](plans/photo-log-3-4-places-browse.plan.md) |
-| 5 | 위치 기록 | 묶음 쓰기 때 휴대폰 위치 기록, 기록 목록, 지도 겹쳐 보기 | pending | - | 3, 4 | - |
+| 4 | 찾기 화면 | 사진 탭: 목록·지도 전환, 기간·지역·시뮬레이션 필터와 검색, 위치 없음 묶음, 사진 상세 | complete (실기기 미확인) | - | 2, 3 | [plans/photo-log-3-4-places-browse.plan.md](plans/photo-log-3-4-places-browse.plan.md) |
+| 5 | 위치 기록 | 묶음 쓰기 때 휴대폰 위치 기록, 기록 목록, 지도 겹쳐 보기 | in-progress | - | 3, 4 | [plans/photo-log-5-place-log.plan.md](plans/photo-log-5-place-log.plan.md) |
 | 6 | 동기화 | Supabase 테이블·RLS, 색인·기록 동기화, 같은 사진 합치기 | pending | - | 2, 5 | - |
 
 ### Phase Details
@@ -179,6 +179,8 @@ When 예전 여행 사진의 장소와 설정을 떠올리고 싶으면, I want 
 | 위치 없는 사진 | "위치 없음"으로 모으기 | 시각으로 위치 추정 | 사용자 결정 (2026-10-19) |
 | 주소 변환 | 플랫폼 채널 (`CLGeocoder`, `Geocoder`) | 외부 API, 패키지 | API 키가 없고, OCR 채널과 같은 구조로 가짜 채널 시험이 된다 |
 | 지도 | `flutter_map` + OSM | Google Maps | macOS 지원, API 키 없음 |
+| 위치 기록 범위 | 세트 저장(C1–C7)만, Mac 은 위치 없이 기록, 권한은 저장 직전에 묻는다 | 슬롯 하나 저장도 기록, Mac 미기록 | 5단계 계획 D1–D3 (2026-10-20) |
+| 기록 보기 | 사진 탭의 세 번째 보기 "기록", 지도에 "세트 저장 위치" 칩 | 세트 탭의 "저장 기록" 화면 | 사용자 결정 (2026-10-20) |
 
 ---
 
