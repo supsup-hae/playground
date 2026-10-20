@@ -12,10 +12,10 @@ void main() {
   setUp(() => app = TestApp());
   tearDown(() => app.dispose());
 
-  testWidgets('셸은 레시피·묶음·카메라 슬롯·디자인 화면을 오류 없이 오간다', (tester) async {
+  testWidgets('셸은 모든 목적지 화면을 오류 없이 오간다', (tester) async {
     await app.pumpShell(tester);
 
-    for (final label in ['세트', '사용자 설정', 'RAW 미리보기', '디자인', '레시피']) {
+    for (final label in ['세트', '사용자 설정', 'RAW 미리보기', '사진', '디자인', '레시피']) {
       await tester.tap(find.text(label).first);
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull, reason: label);

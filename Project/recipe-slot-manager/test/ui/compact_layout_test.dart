@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:recipe_slot_manager/library/loadout.dart';
 import 'package:recipe_slot_manager/recipe/recipe.dart';
 import 'package:recipe_slot_manager/ui/apply_loadout_page.dart';
+import 'package:recipe_slot_manager/ui/design_gallery_page.dart';
 import 'package:recipe_slot_manager/ui/sync_bar.dart';
 
 import '../support/test_app.dart';
@@ -32,23 +33,37 @@ void main() {
 
         expect(find.byType(NavigationBar), findsOneWidget);
         expect(find.byType(NavigationRail), findsNothing);
-        for (final label in ['세트', '사용자 설정', 'RAW 미리보기', '디자인', '레시피']) {
+        expect(
+          find.descendant(
+            of: find.byType(NavigationBar),
+            matching: find.text('디자인'),
+          ),
+          findsNothing,
+          reason: '디자인은 넓은 창 레일에만 있다',
+        );
+        for (final label in ['세트', '사용자 설정', 'RAW 미리보기', '사진', '레시피']) {
           await tester.tap(find.text(label).last);
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull, reason: label);
         }
 
-        // 목록은 보이는 줄만 그리므로 디자인 화면을 끝까지 내려 모든 컴포넌트를 그린다.
-        await tester.tap(find.text('디자인').last);
-        await tester.pumpAndSettle();
-        await tester.drag(find.byType(ListView).first, const Offset(0, -3000));
-        await tester.pumpAndSettle();
-        expect(tester.takeException(), isNull, reason: '디자인 끝까지');
-
         await tester.tap(find.text('사용자 설정').last);
         await tester.pumpAndSettle();
         await TestApp.tapAndWait(tester, find.text('C1–C7 불러오기'));
         expect(tester.takeException(), isNull, reason: '7슬롯 표');
+      });
+
+      testWidgets('디자인 화면을 끝까지 내려도 넘치지 않는다', (tester) async {
+        await app.pumpPage(
+          tester,
+          const Scaffold(body: DesignGalleryPage()),
+          size: size,
+        );
+        // 목록은 보이는 줄만 그리므로 끝까지 내려 모든 컴포넌트를 그린다.
+        await tester.drag(find.byType(ListView).first, const Offset(0, -3000));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
       });
 
       testWidgets('로그는 한 줄로 접혀 있다가 누르면 펼쳐진다', (tester) async {
@@ -142,6 +157,20 @@ void main() {
 
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('Recipe 7'), findsOneWidget);
+  });
+
+  testWidgets('디자인 화면을 보다가 창이 좁아지면 첫 탭을, 넓어지면 디자인을 다시 보인다', (tester) async {
+    await app.pumpShell(tester, index: 5);
+    expect(find.byType(DesignGalleryPage), findsOneWidget);
+
+    TestApp.useWindow(tester, phoneSizes['S26 울트라 세로']!);
+    await tester.pumpAndSettle();
+    expect(find.byType(DesignGalleryPage), findsNothing);
+    expect(find.text('새 레시피'), findsOneWidget);
+
+    TestApp.useWindow(tester);
+    await tester.pumpAndSettle();
+    expect(find.byType(DesignGalleryPage), findsOneWidget);
   });
 
   testWidgets('넓은 창에서는 왼쪽 레일을 그대로 쓴다', (tester) async {

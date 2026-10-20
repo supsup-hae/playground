@@ -18,6 +18,9 @@ const _typeSizes = {
   10: 8,
 };
 
+/// EXIF 가 있는 APP1 은 파일 앞 64 KiB 안에 있다. 사진은 넉넉히 앞부분만 읽는다.
+const jpegHeadBytes = 256 * 1024;
+
 const _broken = ImportException('파일이 잘렸거나 EXIF 정보가 손상되었습니다');
 
 /// [view] 의 [ifdAt] 에 있는 IFD 를 읽는다. 값 위치는 [base] 를 더한 [view] 안의 위치다.

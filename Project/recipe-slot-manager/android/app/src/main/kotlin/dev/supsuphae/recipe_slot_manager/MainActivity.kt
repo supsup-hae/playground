@@ -1,5 +1,6 @@
 package dev.supsuphae.recipe_slot_manager
 
+import android.content.Intent
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -7,6 +8,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     private var ptpChannel: PtpChannel? = null
     private var ocrChannel: OcrChannel? = null
+    private var photoChannel: PhotoChannel? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -18,6 +20,26 @@ class MainActivity : FlutterActivity() {
         ocrChannel = ocr
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, OcrChannel.CHANNEL)
             .setMethodCallHandler(ocr)
+        val photos = PhotoChannel(this)
+        photoChannel = photos
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, PhotoChannel.CHANNEL)
+            .setMethodCallHandler(photos)
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ) {
+        if (photoChannel?.onPermissionResult(requestCode) == true) return
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    }
+
+    @Deprecated("FlutterActivity 가 아직 Activity Result API 대신 이 콜백을 넘긴다")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (photoChannel?.onActivityResult(requestCode, resultCode, data) == true) return
+        @Suppress("DEPRECATION")
+        super.onActivityResult(requestCode, resultCode, data)
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
@@ -25,6 +47,8 @@ class MainActivity : FlutterActivity() {
         ptpChannel = null
         ocrChannel?.dispose()
         ocrChannel = null
+        photoChannel?.dispose()
+        photoChannel = null
         super.cleanUpFlutterEngine(flutterEngine)
     }
 }

@@ -11,6 +11,7 @@ class MainFlutterWindow: NSWindow {
     RegisterGeneratedPlugins(registry: flutterViewController)
     PtpChannel.register(with: flutterViewController.registrar(forPlugin: "PtpChannel"))
     OcrChannel.register(with: flutterViewController.registrar(forPlugin: "OcrChannel"))
+    BookmarkChannel.register(with: flutterViewController.registrar(forPlugin: "BookmarkChannel"))
 
     super.awakeFromNib()
   }

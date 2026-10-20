@@ -257,6 +257,63 @@ void main() {
     });
   });
 
+  group('JSON', () {
+    test('모든 값을 저장했다가 그대로 읽는다', () {
+      const info = PhotoInfo(
+        shotAt: null,
+        utcOffset: Duration(hours: -5, minutes: -30),
+        location: (latitude: 35.6587, longitude: -139.7),
+        model: 'X-T5',
+        imageCount: 1422,
+        recipe: {'filmSimulation': 16, 'highlight': -2},
+      );
+      final withTime = PhotoInfo(
+        shotAt: DateTime.utc(2026, 10, 11, 15, 26, 10),
+        utcOffset: info.utcOffset,
+        location: info.location,
+        model: info.model,
+        imageCount: info.imageCount,
+        recipe: info.recipe,
+      );
+
+      final json = withTime.toJson();
+      final read = PhotoInfo.fromJson(json);
+
+      expect(json['shotAt'], '2026-10-11T15:26:10');
+      expect(json['utcOffsetMinutes'], -330);
+      expect(read.shotAt, withTime.shotAt);
+      expect(read.utcOffset, withTime.utcOffset);
+      expect(read.location, withTime.location);
+      expect(read.key, withTime.key);
+      expect(read.recipe, withTime.recipe);
+    });
+
+    test('없는 값은 키를 빼고, 읽으면 null 이다', () {
+      final json = const PhotoInfo().toJson();
+
+      expect(json, {'recipe': <String, double>{}});
+      final read = PhotoInfo.fromJson(json);
+      expect(read.shotAt, isNull);
+      expect(read.location, isNull);
+      expect(read.recipe, isEmpty);
+    });
+
+    test('형식이 맞지 않으면 FormatException', () {
+      for (final json in [
+        null,
+        {'recipe': 'x'},
+        {'recipe': <String, Object>{}, 'latitude': 'x', 'longitude': 1},
+        {'recipe': <String, Object>{}, 'shotAt': '어제'},
+      ]) {
+        expect(
+          () => PhotoInfo.fromJson(json),
+          throwsFormatException,
+          reason: '$json',
+        );
+      }
+    });
+  });
+
   test('JPEG 이 아니면 ImportException', () {
     expect(
       () => readPhotoInfo(Uint8List.fromList([0x89, 0x50, 0x4E, 0x47])),

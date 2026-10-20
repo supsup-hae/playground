@@ -6,17 +6,26 @@ import 'package:recipe_slot_manager/library/library_store.dart';
 import 'package:recipe_slot_manager/ui/design_gallery_page.dart';
 import 'package:recipe_slot_manager/ui/loadout_list_page.dart';
 import 'package:recipe_slot_manager/ui/log_panel.dart';
+import 'package:recipe_slot_manager/ui/photos_page.dart';
 import 'package:recipe_slot_manager/ui/raw_preview_page.dart';
 import 'package:recipe_slot_manager/ui/recipe_list_page.dart';
 import 'package:recipe_slot_manager/ui/slots_page.dart';
 
-/// 화면 목적지. 넓은 창의 레일과 좁은 화면의 아래 탭이 같은 목록을 쓴다.
+/// 화면 목적지. 넓은 창의 레일은 전부, 휴대폰 아래 탭은 [onPhone] 인 것만 보인다.
 const _destinations = [
-  (Icons.tune, '레시피'),
-  (Icons.view_week_outlined, '세트'),
-  (Icons.table_chart_outlined, '사용자 설정'),
-  (Icons.photo_filter_outlined, 'RAW 미리보기'),
-  (Icons.palette_outlined, '디자인'),
+  (icon: Icons.tune, label: '레시피', onPhone: true),
+  (icon: Icons.view_week_outlined, label: '세트', onPhone: true),
+  (icon: Icons.table_chart_outlined, label: '사용자 설정', onPhone: true),
+  (icon: Icons.photo_filter_outlined, label: 'RAW 미리보기', onPhone: true),
+  (icon: Icons.photo_library_outlined, label: '사진', onPhone: true),
+  // 개발용 화면이라 휴대폰 아래 탭(5개)에서는 뺀다.
+  (icon: Icons.palette_outlined, label: '디자인', onPhone: false),
+];
+
+/// 휴대폰 아래 탭에 보이는 목적지의 [_destinations] 번호.
+final _phoneIndexes = [
+  for (var i = 0; i < _destinations.length; i++)
+    if (_destinations[i].onPhone) i,
 ];
 
 /// 위쪽 카메라 연결 막대, 아래쪽 작업 로그, 화면 탐색으로 된 앱의 바깥 틀.
@@ -28,12 +37,14 @@ class AppShell extends StatefulWidget {
     super.key,
     required this.session,
     required this.library,
+    required this.photos,
     this.headerActions = const [],
     this.initialIndex = 0,
   });
 
   final CameraSession session;
   final LibraryStore library;
+  final PhotosSetup photos;
 
   /// 연결 버튼 앞에 놓을 버튼 (동기화 등).
   final List<Widget> headerActions;
@@ -57,7 +68,9 @@ class _AppShellState extends State<AppShell> {
     final compact =
         size.width < AppBreakpoints.compactWidth ||
         size.height < AppBreakpoints.compactHeight;
-    final page = switch (_index) {
+    // 휴대폰 아래 탭에 없는 화면을 보던 중 창이 좁아지면 첫 탭을 보인다. 넓어지면 돌아간다.
+    final shown = compact && !_phoneIndexes.contains(_index) ? 0 : _index;
+    final page = switch (shown) {
       0 => RecipeListPage(library: widget.library, session: widget.session),
       1 => LoadoutListPage(library: widget.library, session: widget.session),
       2 => SlotsPage(session: widget.session),
@@ -66,6 +79,7 @@ class _AppShellState extends State<AppShell> {
         library: widget.library,
         developer: _developer,
       ),
+      4 => PhotosPage(setup: widget.photos),
       _ => const DesignGalleryPage(),
     };
     final content = Column(
@@ -90,7 +104,7 @@ class _AppShellState extends State<AppShell> {
                 labelType: NavigationRailLabelType.all,
                 onDestinationSelected: _select,
                 destinations: [
-                  for (final (icon, label) in _destinations)
+                  for (final (:icon, :label, onPhone: _) in _destinations)
                     NavigationRailDestination(
                       icon: Icon(icon),
                       label: Text(label),
@@ -105,11 +119,14 @@ class _AppShellState extends State<AppShell> {
       ),
       bottomNavigationBar: compact
           ? NavigationBar(
-              selectedIndex: _index,
-              onDestinationSelected: _select,
+              selectedIndex: _phoneIndexes.indexOf(shown),
+              onDestinationSelected: (i) => _select(_phoneIndexes[i]),
               destinations: [
-                for (final (icon, label) in _destinations)
-                  NavigationDestination(icon: Icon(icon), label: label),
+                for (final i in _phoneIndexes)
+                  NavigationDestination(
+                    icon: Icon(_destinations[i].icon),
+                    label: _destinations[i].label,
+                  ),
               ],
             )
           : null,
