@@ -181,3 +181,12 @@ flutter build apk --debug
 - `Geocoder` 를 인터페이스로 두고 `PlatformGeocoder` 가 채널을 쓴다. 시험은 가짜 Geocoder 로 한다
 - 장소 변환 진행은 색인기 진행에 "장소 이름" 으로 보인다
 - macOS·Android 모두 `network` 오류에 호출 제한도 포함된다(`throttled` 를 따로 받지 않는다)
+
+## 구현 중 바뀐 점 (4단계)
+
+- 썸네일은 사진을 새로 줄이지 않고 EXIF 의 IFD1 썸네일을 앞부분 읽기로 꺼낸다(`readExifThumbnail`). Android `loadThumbnail` 은 쓰지 않는다
+- 상세 화면의 사진 원본은 `readHead(length:)` 로 파일 전체를 읽는다. macOS 는 색인 뒤 닫은 폴더 접근을 읽을 때 다시 열고, 동시에 읽는 사진은 같은 열기를 기다린다
+- 기간 필터는 연도로 한다(`PhotoFilter.year`)
+- 저작권 표시는 좁은 화면에서 넘치지 않도록 직접 그린다(`flutter_map` 의 `SimpleAttributionWidget` 는 360 dp 폭에서 넘침)
+- 상세 화면의 "레시피로 가져오기" 는 화면 아래에 고정한다
+- 날짜 묶음 제목은 동네가 아니라 도시 단위(`Place.cityLabel`)
