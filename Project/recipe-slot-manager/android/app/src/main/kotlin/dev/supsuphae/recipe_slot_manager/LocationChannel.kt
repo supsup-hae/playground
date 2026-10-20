@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
 import android.os.Build
+import android.os.SystemClock
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 
@@ -21,6 +22,9 @@ class LocationChannel(private val activity: Activity) : MethodChannel.MethodCall
     companion object {
         const val CHANNEL = "recipe_slot_manager/location"
         private const val REQUEST_CODE = 4031
+
+        /** API 29 이하에서 이보다 오래된 마지막 위치는 지금 위치로 쓰지 않는다. */
+        private const val MAX_LAST_LOCATION_AGE_NANOS = 2L * 60 * 1_000_000_000
     }
 
     private val manager = activity.getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -84,9 +88,11 @@ class LocationChannel(private val activity: Activity) : MethodChannel.MethodCall
                     result.success(fields(it))
                 }
             } else {
-                // API 29 이하는 한 번 받기 API 가 없어 가장 최근 위치를 쓴다.
+                // API 29 이하는 한 번 받기 API 가 없어 가장 최근 위치를 쓴다. 오래된 위치는 버린다.
+                val now = SystemClock.elapsedRealtimeNanos()
                 val last = providers.mapNotNull { manager.getLastKnownLocation(it) }
-                    .maxByOrNull { it.time }
+                    .filter { now - it.elapsedRealtimeNanos <= MAX_LAST_LOCATION_AGE_NANOS }
+                    .maxByOrNull { it.elapsedRealtimeNanos }
                 result.success(fields(last))
             }
         } catch (e: SecurityException) {
