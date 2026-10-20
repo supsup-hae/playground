@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:recipe_slot_manager/camera/camera_log.dart';
 import 'package:recipe_slot_manager/library/loadout.dart';
 import 'package:recipe_slot_manager/photo/locator.dart';
+import 'package:recipe_slot_manager/photo/place.dart';
 import 'package:recipe_slot_manager/photo/place_log.dart';
 import 'package:recipe_slot_manager/photo/place_log_store.dart';
 import 'package:recipe_slot_manager/photo/place_resolver.dart';
@@ -83,8 +84,7 @@ class PlaceLogger {
     final location = entry.location;
     if (location == null) return '위치 없음 (${entry.missingReason})';
     final accuracy = entry.accuracy;
-    return '${location.latitude.toStringAsFixed(4)}, '
-        '${location.longitude.toStringAsFixed(4)}'
+    return '${formatGeoPoint(location)}'
         '${accuracy == null ? '' : ' (약 ${accuracy.round()} m)'}';
   }
 }

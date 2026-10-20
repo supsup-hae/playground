@@ -3,6 +3,7 @@ import 'package:recipe_slot_manager/design/tokens.dart';
 import 'package:recipe_slot_manager/photo/photo_index_store.dart';
 import 'package:recipe_slot_manager/photo/photo_source.dart';
 import 'package:recipe_slot_manager/recipe/recipe_fields.dart';
+import 'package:recipe_slot_manager/ui/formats.dart';
 import 'package:recipe_slot_manager/ui/photos_setup.dart';
 
 /// 사진 출처 등록, 새 사진 읽기, 색인 요약. 사진 탭의 "출처" 시트에 보인다.
@@ -163,7 +164,7 @@ class _PhotoSourcesPanelState extends State<PhotoSourcesPanel> {
       subtitle: Text(
         indexedAt == null
             ? '$kind · 아직 읽지 않음'
-            : '$kind · $count장 · ${_date(indexedAt)} 읽음',
+            : '$kind · $count장 · ${formatDateTime(indexedAt)} 읽음',
         overflow: TextOverflow.ellipsis,
       ),
       trailing: IconButton(
@@ -204,9 +205,4 @@ class _PhotoSourcesPanelState extends State<PhotoSourcesPanel> {
     String folder(String path) => path.endsWith('/') ? path : '$path/';
     return folder(a).startsWith(folder(b)) || folder(b).startsWith(folder(a));
   }
-
-  static String _date(DateTime t) =>
-      '${t.year}-${t.month.toString().padLeft(2, '0')}-'
-      '${t.day.toString().padLeft(2, '0')} '
-      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 }
