@@ -157,6 +157,32 @@ void main() {
 
   Finder countText(String text) => find.text(text);
 
+  testWidgets('다른 기기 사진은 썸네일 자리에 "다른 기기", 상세에 "이 기기에 없는 사진"', (tester) async {
+    await seed(tester);
+    await tester.runAsync(
+      () => app.photoStore.replaceOtherDevice([
+        IndexedPhoto(
+          sourceId: otherDeviceSourceId,
+          file: (id: 'k', name: 'DSCF9999.JPG', size: 0, modifiedMs: 0),
+          info: PhotoInfo(shotAt: DateTime.utc(2026, 5, 5)),
+        ),
+      ]),
+    );
+    await app.pumpPage(
+      tester,
+      Scaffold(
+        body: PhotosPage(setup: app.photos(), library: app.library),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('다른 기기'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('photo-k')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('이 기기에 없는 사진'), findsOneWidget);
+  });
+
   group('기록 보기', () {
     testWidgets('세트 저장 기록을 날짜별 최신순으로, 장소·세트·레시피 이름과 함께 보인다', (tester) async {
       await pumpPhotos(tester, logs: true);
