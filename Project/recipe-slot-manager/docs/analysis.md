@@ -95,7 +95,7 @@ Community for Fuji의 `fuji_camera_kit`도 macOS `ImageCaptureCore`의 `requestS
 | B. A + 컬렉션·알림·국가 지도·랭킹·신고/차단 | +1–2주 | |
 | C. 카메라 슬롯 C1–C7 읽기/쓰기 (USB PTP) | 1–2주 | 프로토콜은 공개됨. X-T5 실기기로 값 확인 필요 |
 | D. RAF 현상(darkroom) | 1–2주 | 카메라 내부 변환을 쓰므로 RAW 엔진 불필요 |
-| E. 무선(BLE) 연결 | 불확실 | 공개 자료 부족 |
+| E. 무선(BLE) 연결 | 부분 가능 | 전체 설정 백업을 고쳐 복원하는 방식. `bluetooth-research.md` |
 
 ## 지켜야 할 선
 

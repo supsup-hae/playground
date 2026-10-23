@@ -42,7 +42,7 @@ We'll know we're right when 7슬롯 전체 덮어쓰기가 10초 안에 끝나�
 - [ ] 슬롯 1개 쓰기에 PTP 왕복이 몇 번, 몇 ms 걸리는가 - 10초 목표 달성 여부를 결정한다. 바뀐 값만 쓰면 왕복 수가 줄어든다
 - [ ] 슬롯 선택 `0xD18C`이 카메라의 현재 촬영 설정까지 바꾸는가
 - [ ] Android에서 USB PTP 연결 시 권한·전원 조건 (USB OTG, 카메라 연결 모드) - 3단계에서 권한 요청, 꽂힘 시 앱 열기, 인터페이스 강제 점유를 구현. 휴대폰 전원으로 카메라가 연결 모드에 들어가는지와 삼성 기본 앱이 카메라를 먼저 잡는지는 실기기 미확인
-- [ ] 블루투스로 슬롯을 쓰는 방법 - 공개 자료가 없다. 6단계 조사 결과에 따라 범위가 정해진다
+- [ ] 블루투스로 슬롯을 쓰는 방법 - 슬롯 값 하나를 쓰는 명령은 공개 자료에 없다. 전체 설정 백업(`backup.dat`)을 읽고 고쳐 복원하는 길이 있으며, X-T5 의 슬롯 위치와 전송 절차는 실기기 관찰이 필요하다 (`bluetooth-research.md`)
 - [ ] 후지 JPEG EXIF(MakerNote)에 레시피 값이 어디까지 기록되는가 (DR, 클래리티, WB 시프트 등)
 - [ ] 다이내믹 레인지(ISO 의존), 클래리티(드라이브 모드 의존)를 카메라가 거부할 때의 처리 방식
 
@@ -133,8 +133,8 @@ When 장소를 옮기거나 특정 장면을 만나면, I want to 그 상황에 
 | 3 | Android | 같은 기능을 Android에서 USB로 | complete (실기기 미확인) | - | 2 | [plans/phase-3-android.plan.md](plans/phase-3-android.plan.md) |
 | 4 | 가져오기 | 카메라 슬롯 가져오기, JPEG EXIF 추출, OCR | complete (실기기·표본 미확인) | with 5 | 2 | [plans/phase-4-import.plan.md](plans/phase-4-import.plan.md) |
 | 5 | RAW 미리보기 | RAF 업로드 → 카메라 내부 현상 → 좌우 비교 | complete (실기기 미확인) | with 4 | 2 | [plans/phase-5-raw-preview.plan.md](plans/phase-5-raw-preview.plan.md) |
-| 6 | 블루투스 조사 | 본인 카메라와 공식 앱의 BLE 통신 관찰, 슬롯 쓰기 가능 여부 판단 | pending | with 2–5 | 1 | - |
-| 7 | 블루투스 연결 | 6단계 결과가 가능으로 나오면 구현 | pending | - | 3, 6 | - |
+| 6 | 블루투스 조사 | 본인 카메라와 공식 앱의 BLE 통신 관찰, 슬롯 쓰기 가능 여부 판단 | complete (공개 자료 조사, 실기기 관찰 전): 부분 가능 | with 2–5 | 1 | [bluetooth-research.md](bluetooth-research.md) |
+| 7 | 블루투스 연결 | 6단계 결과가 가능으로 나오면 구현 | pending (계획 승인 대기) | - | 3, 6 | [plans/phase-7-bluetooth.plan.md](plans/phase-7-bluetooth.plan.md) |
 
 ### Phase Details
 
