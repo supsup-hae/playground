@@ -1,7 +1,7 @@
 # Plan: 블루투스로 세트 저장 (7단계)
 
 ## Summary
-6단계 조사(`docs/bluetooth-research.md`) 결과는 "부분 가능"이다. 블루투스로는 카메라 전체 설정 백업 파일(`backup.dat`)을 읽고 복원하는 길만 있다. 이 파일의 X-T5 슬롯 위치와 파일 전송 절차는 공개 자료에 없어 실기기 관찰이 먼저다. 그래서 7단계를 둘로 나눈다. 7a 는 관찰 자료 없이 할 수 있는 읽기 전용 준비이고, 7b 는 관찰 뒤의 쓰기다.
+6단계 조사(`docs/bluetooth-research.md`) 결과는 "부분 가능"이다. 블루투스로는 카메라 전체 설정 백업 파일(`backup.dat`)을 읽고 복원하는 길만 있다. 이 파일의 X-T5 슬롯 위치와 파일 전송 절차는 공개 자료에 없어 실기기 관찰이 먼저다. 그래서 7단계를 둘로 나눈다. 7a 는 관찰 기록으로 파일 읽기 절차를 확인한 뒤 하는 읽기 전용 준비이고, 7b 는 슬롯 위치와 복원 절차를 확인한 뒤의 쓰기다.
 
 ## Metadata
 - **Complexity**: Large (7a Medium, 7b 관찰 결과에 따름)
@@ -25,7 +25,12 @@
 
 - 사전 조건(사용자): `docs/bluetooth-research.md` 의 관찰 절차로 XApp 백업·복원 기록과 백업 두 벌을 만든다. 기록은 저장소에 올리지 않는다
 - 관찰 기록으로 파일 서비스의 읽기 절차(파일 이름 쓰기 → 모드 → 조각 읽기)를 확정한 뒤 구현한다
-- 화면: 사용자 설정 탭에 "블루투스로 백업 읽기"(Android). 읽은 파일은 USB 백업과 같은 백업 폴더에 둔다
+- 채널: `recipe_slot_manager/ble`(`BleChannel.kt`). `MainActivity.configureFlutterEngine` 에서 다른 채널과 같이 `MethodChannel` 로 등록하고, 권한 결과는 `onRequestPermissionsResult` 에서 넘긴다. 메서드:
+  - `requestAccess` → bool (블루투스 연결·검색 권한)
+  - `readBackup` → `{model, bytes}` (페어링·연결·파일 읽기를 한 번에). 오류 코드 `denied`·`disabled`·`notFound`·`notPaired`·`busy`·`protocol`
+  - 페어링 단계와 조각 읽기 순서는 관찰 기록으로 정한다
+- 저장: 백업 폴더(`SlotBackupStore` 와 같은 폴더)에 `camera-<기종>-<UTC 시각>.dat` 로 원본 바이트만 둔다. 같은 이름이면 덮어쓰지 않고 실패로 알린다. 자동으로 지우지 않는다. USB 슬롯 백업(`slots-*.json`)의 목록·복원에는 넣지 않는다(7a 는 읽기만)
+- 화면: 사용자 설정 탭에 "블루투스로 백업 읽기"(Android). 받은 파일 이름과 크기를 로그에 남긴다
 - 도구: `tool/backup_diff.dart` — 두 `backup.dat` 의 다른 바이트 위치를 출력한다
 - 시험: 가짜 채널로 페어링 상태·읽기 조각 이어 붙이기·크기 검사
 

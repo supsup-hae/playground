@@ -133,7 +133,7 @@ When 장소를 옮기거나 특정 장면을 만나면, I want to 그 상황에 
 | 3 | Android | 같은 기능을 Android에서 USB로 | complete (실기기 미확인) | - | 2 | [plans/phase-3-android.plan.md](plans/phase-3-android.plan.md) |
 | 4 | 가져오기 | 카메라 슬롯 가져오기, JPEG EXIF 추출, OCR | complete (실기기·표본 미확인) | with 5 | 2 | [plans/phase-4-import.plan.md](plans/phase-4-import.plan.md) |
 | 5 | RAW 미리보기 | RAF 업로드 → 카메라 내부 현상 → 좌우 비교 | complete (실기기 미확인) | with 4 | 2 | [plans/phase-5-raw-preview.plan.md](plans/phase-5-raw-preview.plan.md) |
-| 6 | 블루투스 조사 | 본인 카메라와 공식 앱의 BLE 통신 관찰, 슬롯 쓰기 가능 여부 판단 | complete (공개 자료 조사, 실기기 관찰 전): 부분 가능 | with 2–5 | 1 | [bluetooth-research.md](bluetooth-research.md) |
+| 6 | 블루투스 조사 | 본인 카메라와 공식 앱의 BLE 통신 관찰, 슬롯 쓰기 가능 여부 판단 | in-progress (공개 자료 조사 완료, 실기기 관찰 대기): 부분 가능 | with 2–5 | 1 | [bluetooth-research.md](bluetooth-research.md) |
 | 7 | 블루투스 연결 | 6단계 결과가 가능으로 나오면 구현 | pending (계획 승인됨, 실기기 관찰 기록 대기) | - | 3, 6 | [plans/phase-7-bluetooth.plan.md](plans/phase-7-bluetooth.plan.md) |
 
 ### Phase Details
