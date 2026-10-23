@@ -7,6 +7,7 @@ import 'package:recipe_slot_manager/import/recipe_import.dart';
 import 'package:recipe_slot_manager/library/library_store.dart';
 import 'package:recipe_slot_manager/photo/photo_info.dart';
 import 'package:recipe_slot_manager/photo/photo_query.dart';
+import 'package:recipe_slot_manager/photo/photo_source.dart';
 import 'package:recipe_slot_manager/recipe/recipe_fields.dart';
 import 'package:recipe_slot_manager/ui/formats.dart';
 import 'package:recipe_slot_manager/ui/photos_setup.dart';
@@ -117,11 +118,11 @@ class _PhotoDetailPageState extends State<PhotoDetailPage> {
                   bytes,
                   fit: BoxFit.contain,
                   cacheWidth: 2048,
-                  errorBuilder: (_, _, _) => const _NoImage(),
+                  errorBuilder: (_, _, _) => _NoImage(entry.photo),
                 ),
                 null =>
                   snapshot.connectionState == ConnectionState.done
-                      ? const _NoImage()
+                      ? _NoImage(entry.photo)
                       : const Center(child: CircularProgressIndicator()),
               },
             ),
@@ -151,11 +152,15 @@ class _PhotoDetailPageState extends State<PhotoDetailPage> {
 }
 
 class _NoImage extends StatelessWidget {
-  const _NoImage();
+  const _NoImage(this.photo);
+
+  final IndexedPhoto photo;
 
   @override
-  Widget build(BuildContext context) => const ColoredBox(
+  Widget build(BuildContext context) => ColoredBox(
     color: AppColors.surfaceRaised,
-    child: Center(child: Text('사진을 열 수 없습니다')),
+    child: Center(
+      child: Text(photo.fromOtherDevice ? '이 기기에 없는 사진' : '사진을 열 수 없습니다'),
+    ),
   );
 }

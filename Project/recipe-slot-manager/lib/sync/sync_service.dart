@@ -6,6 +6,7 @@ import 'package:recipe_slot_manager/camera/camera_log.dart';
 import 'package:recipe_slot_manager/library/library_store.dart';
 import 'package:recipe_slot_manager/library/loadout.dart';
 import 'package:recipe_slot_manager/recipe/recipe.dart';
+import 'package:recipe_slot_manager/sync/photo_sync.dart';
 import 'package:recipe_slot_manager/sync/remote_library.dart';
 import 'package:recipe_slot_manager/util/atomic_json.dart';
 
@@ -14,6 +15,8 @@ import 'package:recipe_slot_manager/util/atomic_json.dart';
 /// 원격 행을 모두 받아 id 별로 updatedAt 이 늦은 쪽을 남기고([LibraryStore.mergeRemote]),
 /// 그다음 원격에 없거나 원격보다 늦게 고친 기기 행만 올린다. 형식을 읽지 못한 원격 행은
 /// 건너뛰고, 그 id 의 기기 행으로 덮어쓰지 않는다.
+/// 보관함을 맞춘 다음 [photos] 가 있으면 사진 색인과 세트 저장 기록도 맞춘다. 사진 쪽이 실패해도
+/// 보관함 동기화 결과는 그대로다.
 /// 마지막 동기화 시각은 [stateFile] 에 `{ "lastSyncAt": ISO 8601 UTC }` 로 둔다 (표시용).
 class SyncService extends ChangeNotifier {
   SyncService({
@@ -21,6 +24,7 @@ class SyncService extends ChangeNotifier {
     required this.remote,
     required this.log,
     required this.stateFile,
+    this.photos,
     DateTime Function()? clock,
   }) : _clock = clock ?? DateTime.now;
 
@@ -28,6 +32,7 @@ class SyncService extends ChangeNotifier {
   final RemoteLibrary remote;
   final CameraLog log;
   final File stateFile;
+  final PhotoSync? photos;
   final DateTime Function() _clock;
 
   DateTime? _lastSyncAt;
@@ -87,6 +92,7 @@ class SyncService extends ChangeNotifier {
         '병합 $merged, 업로드 ${upRecipes.length + upLoadouts.length}, '
         '건너뜀 ${recipes.skipped + loadouts.skipped}',
       );
+      await _syncPhotos();
       return true;
     } on Exception catch (e) {
       log.add('동기화 실패: $e');
@@ -94,6 +100,14 @@ class SyncService extends ChangeNotifier {
     } finally {
       _syncing = false;
       notifyListeners();
+    }
+  }
+
+  Future<void> _syncPhotos() async {
+    try {
+      await photos?.sync();
+    } on Exception catch (e) {
+      log.add('사진 동기화 실패: $e');
     }
   }
 

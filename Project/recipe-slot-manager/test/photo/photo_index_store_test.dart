@@ -248,4 +248,59 @@ void main() {
       expect(store.photos, hasLength(2));
     });
   });
+
+  group('다른 기기 사진', () {
+    final shot = DateTime.utc(2026, 10, 11, 15, 26, 10);
+    const tokyo = (latitude: 35.6, longitude: 139.7);
+
+    IndexedPhoto local(String name, {GeoPoint? location}) => IndexedPhoto(
+      sourceId: 's1',
+      file: (id: '/m/$name', name: name, size: 100, modifiedMs: 1),
+      info: PhotoInfo(shotAt: shot, location: location),
+    );
+
+    IndexedPhoto remote(String name, {GeoPoint? location}) => IndexedPhoto(
+      sourceId: otherDeviceSourceId,
+      file: (id: name, name: name, size: 0, modifiedMs: 0),
+      info: PhotoInfo(shotAt: shot, location: location),
+    );
+
+    test('다른 기기에만 있는 사진도 보이고, 저장했다가 다시 읽어도 남는다', () async {
+      final store = newStore();
+      await store.replaceOtherDevice([remote('DSCF0001.JPG')]);
+
+      final read = newStore();
+      await read.load();
+
+      expect(read.photos.single.fromOtherDevice, isTrue);
+      expect(read.localPhotos, isEmpty);
+    });
+
+    test('이 기기에도 있으면 이 기기 것을 쓰고, 위치가 없으면 다른 기기의 위치를 빌린다', () async {
+      final store = newStore();
+      await store.saveSource(folder);
+      await store.replacePhotos('s1', [local('DSCF0001.JPG')]);
+      await store.replaceOtherDevice([remote('dscf0001.jpg', location: tokyo)]);
+
+      final shown = store.photos.single;
+      expect(shown.sourceId, 's1');
+      expect(shown.info?.location, tokyo);
+      expect(store.localPhotos.single.info?.location, isNull);
+    });
+
+    test('요약은 이 기기 출처의 사진만 센다', () async {
+      final store = newStore();
+      await store.replaceOtherDevice([remote('DSCF0001.JPG')]);
+
+      expect(store.summary.total, 0);
+    });
+
+    test('같은 사진 키: 이름(소문자)과 촬영 시각, 시각이 없으면 null', () {
+      expect(
+        PhotoIndexStore.photoKey(local('DSCF0001.JPG')),
+        'dscf0001.jpg|${shot.toIso8601String()}',
+      );
+      expect(PhotoIndexStore.photoKey(photo('s1', 'a.jpg')), isNull);
+    });
+  });
 }

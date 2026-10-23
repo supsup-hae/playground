@@ -5,9 +5,14 @@ import 'package:path/path.dart' as p;
 import 'package:recipe_slot_manager/camera/camera_log.dart';
 import 'package:recipe_slot_manager/library/library_store.dart';
 import 'package:recipe_slot_manager/library/loadout.dart';
+import 'package:recipe_slot_manager/photo/photo_index_store.dart';
+import 'package:recipe_slot_manager/photo/place_log_store.dart';
 import 'package:recipe_slot_manager/recipe/recipe.dart';
+import 'package:recipe_slot_manager/sync/photo_sync.dart';
 import 'package:recipe_slot_manager/sync/remote_library.dart';
 import 'package:recipe_slot_manager/sync/sync_service.dart';
+
+import 'photo_sync_test.dart' show FakeRemotePhotos;
 
 /// id 별 body 를 들고 있는 가짜 원격 보관함. 올린 행은 그대로 저장한다.
 class FakeRemote implements RemoteLibrary {
@@ -52,12 +57,17 @@ void main() {
   LibraryStore newLibrary(String name) =>
       LibraryStore(Directory(p.join(root.path, name)), clock: () => now);
 
-  SyncService newService(LibraryStore library, {CameraLog? log}) => SyncService(
+  SyncService newService(
+    LibraryStore library, {
+    CameraLog? log,
+    PhotoSync? photos,
+  }) => SyncService(
     library: library,
     remote: remote,
     log: log ?? CameraLog(),
     stateFile: File(p.join(library.directory.path, 'sync.json')),
     clock: () => now,
+    photos: photos,
   );
 
   Recipe recipe(String id, String name) => Recipe(
@@ -162,4 +172,62 @@ void main() {
     expect(service.lastSyncAt, isNull);
     expect(log.entries.last.$2, startsWith('동기화 실패'));
   });
+
+  group('사진 동기화', () {
+    PhotoSync photoSync(RemotePhotosForTest remote, CameraLog log) => PhotoSync(
+      photos: PhotoIndexStore(Directory(p.join(root.path, 'photos'))),
+      logs: PlaceLogStore(Directory(p.join(root.path, 'photos'))),
+      remote: remote,
+      log: log,
+    );
+
+    test('보관함 다음에 사진과 기록도 맞춘다', () async {
+      final library = newLibrary('a');
+      await library.load();
+      final log = CameraLog();
+
+      expect(
+        await newService(
+          library,
+          log: log,
+          photos: photoSync(RemotePhotosForTest(), log),
+        ).sync(),
+        isTrue,
+      );
+
+      expect(log.entries.map((e) => e.$2), [
+        startsWith('동기화:'),
+        startsWith('사진 동기화:'),
+      ]);
+    });
+
+    test('사진 동기화가 실패해도 보관함 동기화는 성공으로 남는다', () async {
+      final library = newLibrary('a');
+      await library.load();
+      final log = CameraLog();
+      final service = newService(
+        library,
+        log: log,
+        photos: photoSync(
+          RemotePhotosForTest()..failure = Exception('photos 테이블 없음'),
+          log,
+        ),
+      );
+
+      expect(await service.sync(), isTrue);
+
+      expect(service.lastSyncAt, now);
+      expect(log.entries.last.$2, startsWith('사진 동기화 실패'));
+    });
+  });
+}
+
+class RemotePhotosForTest extends FakeRemotePhotos {
+  Exception? failure;
+
+  @override
+  Future<List<Object?>> fetchPhotos() async {
+    if (failure case final error?) throw error;
+    return super.fetchPhotos();
+  }
 }

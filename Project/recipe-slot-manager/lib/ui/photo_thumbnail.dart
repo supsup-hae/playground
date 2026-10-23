@@ -44,7 +44,7 @@ class PhotoThumbnails {
   }
 }
 
-/// 정사각형 썸네일 칸. 썸네일이 없으면 사진 아이콘.
+/// 정사각형 썸네일 칸. 썸네일이 없으면 사진 아이콘, 다른 기기 사진이면 "다른 기기".
 class PhotoThumbnail extends StatelessWidget {
   const PhotoThumbnail({
     super.key,
@@ -59,10 +59,21 @@ class PhotoThumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const placeholder = ColoredBox(
+    final placeholder = ColoredBox(
       color: AppColors.surfaceRaised,
       child: Center(
-        child: Icon(Icons.photo_outlined, color: AppColors.textMuted),
+        child: photo.fromOtherDevice
+            ? const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.devices_outlined, color: AppColors.textMuted),
+                  Text(
+                    '다른 기기',
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                  ),
+                ],
+              )
+            : const Icon(Icons.photo_outlined, color: AppColors.textMuted),
       ),
     );
     return Semantics(

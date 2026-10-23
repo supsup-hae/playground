@@ -12,7 +12,7 @@
 | RAW 미리보기 | RAF 를 카메라로 보내 카메라 안에서 현상한 결과를 레시피끼리 나란히 보기 |
 | 사진 | 지정한 폴더의 사진을 색인해 촬영 시각·장소·필름 시뮬레이션으로 찾기(목록·지도), 세트를 저장한 위치 기록 |
 
-Supabase 설정이 있으면 로그인해 레시피와 세트를 기기 사이에 동기화한다. 없으면 기기에만 저장한다.
+Supabase 설정이 있으면 로그인해 레시피·세트·사진 색인·세트 저장 기록을 기기 사이에 동기화한다(사진 파일은 올리지 않는다). 없으면 기기에만 저장한다.
 
 ## 실행
 
@@ -29,7 +29,7 @@ Android 는 `flutter run -d <기기 id>` 로 실행한다.
 
 ### Supabase 동기화 (선택)
 
-1. Supabase 프로젝트의 SQL 편집기에서 `supabase/setup.sql` 을 실행한다(테이블, 권한, RLS)
+1. Supabase 프로젝트의 SQL 편집기에서 `supabase/setup.sql`(레시피·세트)과 `supabase/photo-log.sql`(사진 색인·세트 저장 기록)을 차례로 실행한다(테이블, 권한, RLS)
 2. `supabase.example.json` 을 `supabase.json` 으로 복사하고 프로젝트 URL 과 publishable key 를 넣는다. 이 파일은 저장소에 올리지 않는다
 3. `flutter run -d macos --dart-define-from-file=supabase.json`
 
