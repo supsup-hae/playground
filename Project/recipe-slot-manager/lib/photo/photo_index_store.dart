@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
+import 'package:recipe_slot_manager/photo/photo_info.dart';
 import 'package:recipe_slot_manager/photo/photo_source.dart';
 import 'package:recipe_slot_manager/util/atomic_json.dart';
 import 'package:recipe_slot_manager/util/serial_queue.dart';
@@ -26,6 +27,9 @@ class PhotoIndexStore extends ChangeNotifier {
   /// 출처 id → 그 출처의 항목.
   final _photos = <String, List<IndexedPhoto>>{};
 
+  /// 다른 기기에서 받은 사진([otherDeviceSourceId]).
+  final _otherDevice = <IndexedPhoto>[];
+
   /// 저장이 겹쳐도 쓰는 시점의 최신 상태를 순서대로 쓴다.
   final _writes = SerialQueue();
 
@@ -36,9 +40,27 @@ class PhotoIndexStore extends ChangeNotifier {
 
   PhotoSource? sourceById(String id) => _sources[id];
 
-  /// 모든 출처의 사진. Mac 과 휴대폰에 같은 사진이 있으면 하나만 둔다([_sameKey]). 위치가 든
-  /// 쪽을 고르고, 둘 다 같으면 먼저 추가한 출처의 것을 쓴다.
+  /// 화면에 보일 사진: [localPhotos] 와 다른 기기에서 받은 사진. 같은 사진이면 이 기기 것을 쓰고,
+  /// 이 기기 것에 위치가 없으면 다른 기기의 위치를 빌린다.
   List<IndexedPhoto> get photos {
+    final unique = {for (final p in localPhotos) _sameKey(p): p};
+    for (final other in _otherDevice) {
+      final key = _sameKey(other);
+      final kept = unique[key];
+      if (kept == null) {
+        unique[key] = other;
+      } else if (kept.info?.location == null) {
+        if (other.info?.location case final location?) {
+          unique[key] = _withLocation(kept, location);
+        }
+      }
+    }
+    return unique.values.toList();
+  }
+
+  /// 이 기기 출처의 사진. Mac 과 휴대폰에 같은 사진이 있으면 하나만 둔다([_sameKey]). 위치가 든
+  /// 쪽을 고르고, 둘 다 같으면 먼저 추가한 출처의 것을 쓴다.
+  List<IndexedPhoto> get localPhotos {
     final unique = <String, IndexedPhoto>{};
     for (final photo in _photos.values.expand((list) => list)) {
       final key = _sameKey(photo);
@@ -51,20 +73,44 @@ class PhotoIndexStore extends ChangeNotifier {
     return unique.values.toList();
   }
 
-  /// 같은 사진이면 같은 값: 파일 이름(대소문자 무시)과 촬영 시각. 카메라 파일 번호는 9999 다음에
-  /// 다시 쓰이므로 시각을 함께 본다. 촬영 시각이 없거나 읽지 못한 사진은 출처와 파일마다 따로 둔다.
-  static String _sameKey(IndexedPhoto photo) => switch (photo.info?.shotAt) {
+  /// 다른 기기에서 받은 사진.
+  List<IndexedPhoto> get otherDevicePhotos => List.unmodifiable(_otherDevice);
+
+  /// 기기가 달라도 같은 사진이면 같은 값: 파일 이름(소문자)과 촬영 시각. 카메라 파일 번호는 9999
+  /// 다음에 다시 쓰이므로 시각을 함께 본다. 촬영 시각이 없으면 null.
+  static String? photoKey(IndexedPhoto photo) => switch (photo.info?.shotAt) {
     final shotAt? =>
       '${photo.file.name.toLowerCase()}|${shotAt.toIso8601String()}',
-    null => '${photo.sourceId}|${photo.file.id}',
+    null => null,
   };
+
+  /// [photoKey], 없으면(촬영 시각이 없거나 읽지 못한 사진) 출처와 파일마다 따로.
+  static String _sameKey(IndexedPhoto photo) =>
+      photoKey(photo) ?? '${photo.sourceId}|${photo.file.id}';
+
+  static IndexedPhoto _withLocation(IndexedPhoto photo, GeoPoint location) {
+    final info = photo.info!;
+    return IndexedPhoto(
+      sourceId: photo.sourceId,
+      file: photo.file,
+      info: PhotoInfo(
+        shotAt: info.shotAt,
+        utcOffset: info.utcOffset,
+        location: location,
+        model: info.model,
+        imageCount: info.imageCount,
+        recipe: info.recipe,
+      ),
+      locationRedacted: photo.locationRedacted,
+    );
+  }
 
   List<IndexedPhoto> photosOf(String sourceId) =>
       List.unmodifiable(_photos[sourceId] ?? const <IndexedPhoto>[]);
 
-  /// [photos] 기준이라 같은 사진은 한 번 센다.
+  /// [localPhotos] 기준이라 같은 사진은 한 번 세고, 다른 기기 사진은 세지 않는다.
   PhotoSummary get summary {
-    final all = photos;
+    final all = localPhotos;
     final counts = <int, int>{};
     for (final photo in all) {
       final code = photo.info?.recipe['filmSimulation']?.toInt();
@@ -100,8 +146,13 @@ class PhotoIndexStore extends ChangeNotifier {
         for (final source in read?.sources ?? const []) source.id: source,
       });
     _photos.clear();
+    _otherDevice.clear();
     for (final photo in read?.photos ?? const <IndexedPhoto>[]) {
-      (_photos[photo.sourceId] ??= []).add(photo);
+      if (photo.fromOtherDevice) {
+        _otherDevice.add(photo);
+      } else {
+        (_photos[photo.sourceId] ??= []).add(photo);
+      }
     }
     notifyListeners();
   }
@@ -134,6 +185,14 @@ class PhotoIndexStore extends ChangeNotifier {
     await _write();
   }
 
+  /// 다른 기기에서 받은 사진을 [photos] 로 바꾼다.
+  Future<void> replaceOtherDevice(List<IndexedPhoto> photos) async {
+    _otherDevice
+      ..clear()
+      ..addAll(photos);
+    await _write();
+  }
+
   /// 출처의 항목을 [photos] 로 바꾸고 출처의 색인 시각을 남긴다.
   Future<void> replacePhotos(String sourceId, List<IndexedPhoto> photos) async {
     final source = _sources[sourceId];
@@ -151,6 +210,7 @@ class PhotoIndexStore extends ChangeNotifier {
         'photos': [
           for (final list in _photos.values)
             for (final p in list) p.toJson(),
+          for (final p in _otherDevice) p.toJson(),
         ],
       }),
     );

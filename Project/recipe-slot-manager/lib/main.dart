@@ -25,7 +25,9 @@ import 'package:recipe_slot_manager/photo/place_log_store.dart';
 import 'package:recipe_slot_manager/photo/place_logger.dart';
 import 'package:recipe_slot_manager/photo/place_resolver.dart';
 import 'package:recipe_slot_manager/photo/place_store.dart';
+import 'package:recipe_slot_manager/sync/photo_sync.dart';
 import 'package:recipe_slot_manager/sync/remote_library.dart';
+import 'package:recipe_slot_manager/sync/remote_photos.dart';
 import 'package:recipe_slot_manager/sync/supabase_config.dart';
 import 'package:recipe_slot_manager/sync/sync_service.dart';
 import 'package:recipe_slot_manager/ui/app_shell.dart';
@@ -48,7 +50,7 @@ Future<void> main() async {
   await library.load();
   library.loadErrors.forEach(session.log.add);
   final (photos, placeLogger) = await _openPhotos(support, session.log);
-  final (sync, auth) = await _startSync(support, library, session.log);
+  final (sync, auth) = await _startSync(support, library, photos, session.log);
 
   runApp(
     MaterialApp(
@@ -129,10 +131,12 @@ Future<(PhotosSetup, PlaceLogger)> _openPhotos(
   return (setup, logger);
 }
 
-/// Supabase 설정이 있으면 연결하고, 로그인돼 있으면 동기화를 시작한다. 설정이 없으면 둘 다 null.
+/// Supabase 설정이 있으면 연결하고, 로그인돼 있으면 동기화를 시작한다. 보관함과 함께 [photos] 의
+/// 사진 색인·세트 저장 기록도 맞춘다. 설정이 없으면 둘 다 null.
 Future<(SyncService?, GoTrueClient?)> _startSync(
   Directory support,
   LibraryStore library,
+  PhotosSetup photos,
   CameraLog log,
 ) async {
   if (!SupabaseConfig.isConfigured) return (null, null);
@@ -146,6 +150,12 @@ Future<(SyncService?, GoTrueClient?)> _startSync(
     remote: SupabaseRemoteLibrary(client),
     log: log,
     stateFile: File(p.join(support.path, 'sync.json')),
+    photos: PhotoSync(
+      photos: photos.store,
+      logs: photos.logs,
+      remote: SupabaseRemotePhotos(client),
+      log: log,
+    ),
   );
   await sync.loadState();
   if (client.auth.currentSession != null) unawaited(sync.sync());

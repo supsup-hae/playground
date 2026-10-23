@@ -46,8 +46,25 @@ class PlaceLogStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// [logs] 중 아직 없는 id 만 더하고 더한 수를 돌려준다.
+  Future<int> addAll(Iterable<PlaceLog> logs) async {
+    final known = {for (final log in _logs) log.id};
+    final added = [
+      for (final log in logs)
+        if (known.add(log.id)) log,
+    ];
+    if (added.isEmpty) return 0;
+    _logs.addAll(added);
+    await _write();
+    return added.length;
+  }
+
   Future<void> add(PlaceLog log) async {
     _logs.add(log);
+    await _write();
+  }
+
+  Future<void> _write() async {
     await _writes.run(
       () => writeJsonAtomically(_file, {
         'logs': [for (final log in _logs) log.toJson()],

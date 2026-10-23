@@ -94,6 +94,9 @@ typedef PhotoFile = ({String id, String name, int size, int modifiedMs});
 typedef PhotoHead = ({Uint8List bytes, bool locationRedacted});
 
 /// 색인 항목 하나. 읽지 못한 사진은 [info] 대신 [error] 를 남긴다.
+/// 다른 기기에서 동기화로 받은 사진의 출처 id. 이 기기에는 파일이 없다.
+const otherDeviceSourceId = '';
+
 final class IndexedPhoto {
   const IndexedPhoto({
     required this.sourceId,
@@ -130,6 +133,9 @@ final class IndexedPhoto {
   final PhotoInfo? info;
   final String? error;
   final bool locationRedacted;
+
+  /// 다른 기기에서 받은 사진. 파일이 없어 썸네일·원본을 읽을 수 없다.
+  bool get fromOtherDevice => sourceId == otherDeviceSourceId;
 
   Map<String, Object> toJson() => {
     'sourceId': sourceId,
