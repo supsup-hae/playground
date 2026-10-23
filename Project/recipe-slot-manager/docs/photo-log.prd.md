@@ -126,7 +126,7 @@ When 예전 여행 사진의 장소와 설정을 떠올리고 싶으면, I want 
 | 3 | 장소 이름 | 주소 변환 채널(macOS·Android), 좌표 캐시 | complete (실기기 미확인) | - | 1 | [plans/photo-log-3-4-places-browse.plan.md](plans/photo-log-3-4-places-browse.plan.md) |
 | 4 | 찾기 화면 | 사진 탭: 목록·지도 전환, 기간·지역·시뮬레이션 필터와 검색, 위치 없음 묶음, 사진 상세 | complete (실기기 미확인) | - | 2, 3 | [plans/photo-log-3-4-places-browse.plan.md](plans/photo-log-3-4-places-browse.plan.md) |
 | 5 | 위치 기록 | 묶음 쓰기 때 휴대폰 위치 기록, 기록 목록, 지도 겹쳐 보기 | complete (실기기 미확인) | - | 3, 4 | [plans/photo-log-5-place-log.plan.md](plans/photo-log-5-place-log.plan.md) |
-| 6 | 동기화 | Supabase 테이블·RLS, 색인·기록 동기화, 같은 사진 합치기 | pending | - | 2, 5 | - |
+| 6 | 동기화 | Supabase 테이블·RLS, 색인·기록 동기화, 같은 사진 합치기 | complete (실서버·실기기 미확인) | - | 2, 5 | [plans/photo-log-6-sync.plan.md](plans/photo-log-6-sync.plan.md) |
 
 ### Phase Details
 
